@@ -1,0 +1,12 @@
+.DS_Store
+dist
+.idea
+.vscode
+cover.out
+*.swp
+*.o
+*.d
+.ycm_extra_conf.py
+.env
+*.rdb
+*.csv
