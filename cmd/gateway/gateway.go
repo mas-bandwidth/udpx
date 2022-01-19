@@ -34,7 +34,7 @@ func main() {
 
 func mainReturnWithCode() int {
 
-	serviceName := "gateway"
+	serviceName := "udpx gateway"
 
 	fmt.Printf("\n%s\n\n", serviceName)
 
