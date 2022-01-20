@@ -13,32 +13,42 @@ help:
 dist:
 	mkdir -p $(DIST_DIR)
 
-.PHONY: build-gateway
-build-gateway: dist
-	@printf "Building gateway... "
-	@$(GO) build -o ${DIST_DIR}/gateway ./cmd/gateway/gateway.go
-	@printf "done\n"
-
 .PHONY: build-client
 build-client: dist
 	@printf "Building client... "
 	@$(GO) build -o ${DIST_DIR}/client ./cmd/client/client.go
 	@printf "done\n"
 
-.PHONY: dev-gateway
-dev-gateway: build-gateway ## runs a local gateway
-	@HTTP_PORT=40000 UDP_PORT=40000 ./dist/gateway
+.PHONY: build-gateway
+build-gateway: dist
+	@printf "Building gateway... "
+	@$(GO) build -o ${DIST_DIR}/gateway ./cmd/gateway/gateway.go
+	@printf "done\n"
+
+.PHONY: build-server
+build-server: dist
+	@printf "Building server... "
+	@$(GO) build -o ${DIST_DIR}/server ./cmd/server/server.go
+	@printf "done\n"
 
 .PHONY: dev-client
 dev-client: build-client ## runs a local client
 	UDP_PORT=30000 SERVER_ADDRESS=127.0.0.1:40000 ./dist/client
+
+.PHONY: dev-gateway
+dev-gateway: build-gateway ## runs a local gateway
+	@HTTP_PORT=40000 UDP_PORT=40000 SERVER_ADDRESS=127.0.0.1:50000 ./dist/server
+
+.PHONY: dev-server
+dev-server: build-server ## runs a local server
+	@HTTP_PORT=50000 UDP_PORT=50000 ./dist/server
 
 .PHONY: format
 format:
 	@$(GOFMT) -s -w .
 
 .PHONY: build-all
-build-all: build-gateway ## builds everything
+build-all: build-client build-gateway build-server ## builds everything
 
 .PHONY: rebuild-all
 rebuild-all: clean build-all ## rebuilds everything
