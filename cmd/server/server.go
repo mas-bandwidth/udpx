@@ -168,10 +168,9 @@ func mainReturnWithCode() int {
 
 				fmt.Printf("received %d byte udp packet from %s\n", packetBytes, from)
 
-				// temp: reflect packet back to client to verify that client receives packets
-				if _, err := conn.WriteToUDP(packetData, from); err != nil {
-					core.Error("failed to write udp response packet: %v", err)
-				}
+				// todo: process the packet, do reliability etc
+				_ = packetData
+
 			}
 
 			wg.Done()

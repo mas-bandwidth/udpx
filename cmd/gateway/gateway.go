@@ -63,6 +63,12 @@ func mainReturnWithCode() int {
 
 	fmt.Printf("%s\n", serviceName)
 
+	serverAddress, err := envvar.GetAddress("SERVER_ADDRESS", core.ParseAddress("127.0.0.1:40000"))
+	if err != nil {
+		core.Error("invalid SERVER_ADDRESS: %v", err)
+		return 1
+	}
+
 	ctx, ctxCancelFunc := context.WithCancel(context.Background())
 
 	// Start HTTP server
@@ -166,12 +172,16 @@ func mainReturnWithCode() int {
 
 				packetData := buffer[:packetBytes]
 
-				fmt.Printf("received %d byte udp packet from %s\n", packetBytes, from)
+				fmt.Printf("recv %d byte packet from %s\n", packetBytes, from)
 
-				// temp: reflect packet back to client to verify that client receives packets
-				if _, err := conn.WriteToUDP(packetData, from); err != nil {
+				// todo: various stateless checks on packet to drop if it isn't valid
+
+				// forward packet to server
+
+				if _, err := conn.WriteToUDP(packetData, serverAddress); err != nil {
 					core.Error("failed to write udp response packet: %v", err)
 				}
+				fmt.Printf("send %d byte packet to %s\n", packetBytes, serverAddress)
 			}
 
 			wg.Done()

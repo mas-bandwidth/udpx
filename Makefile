@@ -37,7 +37,7 @@ dev-client: build-client ## runs a local client
 
 .PHONY: dev-gateway
 dev-gateway: build-gateway ## runs a local gateway
-	@HTTP_PORT=40000 UDP_PORT=40000 SERVER_ADDRESS=127.0.0.1:50000 ./dist/server
+	@HTTP_PORT=40000 UDP_PORT=40000 SERVER_ADDRESS=127.0.0.1:50000 ./dist/gateway
 
 .PHONY: dev-server
 dev-server: build-server ## runs a local server
