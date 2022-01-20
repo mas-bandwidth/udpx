@@ -1,11 +1,11 @@
 package core
 
 import (
-	"os"
-	"net"
-	"fmt"
-	"strconv"
 	"encoding/binary"
+	"fmt"
+	"net"
+	"os"
+	"strconv"
 )
 
 var debugLogs bool

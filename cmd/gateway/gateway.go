@@ -1,21 +1,46 @@
 /*
-    UDPX Copyright © 2017 - 2022 Network Next, Inc.
-    This project is licensed under the BSD 3-Clause license.
-    See LICENSE for details.
+   UDPX Copyright (c) 2022, Network Next, Inc. All rights reserved.
+
+   UDPX is open source software licensed under the BSD 3-Clause License.
+
+	Redistribution and use in source and binary forms, with or without
+	modification, are permitted provided that the following conditions are met:
+
+	1. Redistributions of source code must retain the above copyright notice, this
+	   list of conditions and the following disclaimer.
+
+	2. Redistributions in binary form must reproduce the above copyright notice,
+	   this list of conditions and the following disclaimer in the documentation
+	   and/or other materials provided with the distribution.
+
+	3. Neither the name of the copyright holder nor the names of its
+	   contributors may be used to endorse or promote products derived from
+	   this software without specific prior written permission.
+
+	THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+	AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+	IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+	DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+	FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+	DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+	SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+	CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+	OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+	OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 package main
 
 import (
-	"fmt"
 	"context"
+	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
-	"syscall"
 	"sync"
-	"io/ioutil"
+	"syscall"
 
 	"github.com/networknext/udpx/modules/core"
 	"github.com/networknext/udpx/modules/envvar"
@@ -36,7 +61,7 @@ func mainReturnWithCode() int {
 
 	serviceName := "udpx gateway"
 
-	fmt.Printf("\n%s\n\n", serviceName)
+	fmt.Printf("%s\n", serviceName)
 
 	ctx, ctxCancelFunc := context.WithCancel(context.Background())
 
@@ -54,10 +79,10 @@ func mainReturnWithCode() int {
 		}
 
 		go func() {
-			fmt.Printf("started http server on port %s\n\n", httpPort)
+			fmt.Printf("started http server on port %s\n", httpPort)
 			err := srv.ListenAndServe()
 			if err != nil {
-			   core.Error("failed to start http server: %v", err)
+				core.Error("failed to start http server: %v", err)
 				return
 			}
 		}()
@@ -106,6 +131,7 @@ func mainReturnWithCode() int {
 	}
 
 	for i := 0; i < numThreads; i++ {
+
 		go func(thread int) {
 
 			lp, err := lc.ListenPacket(ctx, "udp", "0.0.0.0:"+udpPort)
@@ -124,47 +150,43 @@ func mainReturnWithCode() int {
 				panic(fmt.Sprintf("could not set connection write buffer size: %v", err))
 			}
 
-			dataArray := [MaxPacketSize]byte{}
+			buffer := [MaxPacketSize]byte{}
 
 			for {
 
-				data := dataArray[:]
-
-				size, from, err := conn.ReadFromUDP(data)
+				packetBytes, from, err := conn.ReadFromUDP(buffer[:])
 				if err != nil {
 					core.Error("failed to read udp packet: %v", err)
 					break
 				}
 
-				if size <= 0 {
+				if packetBytes <= 0 {
 					continue
 				}
 
-				data = data[:size]
+				packetData := buffer[:packetBytes]
 
-				fmt.Printf("received %d byte udp packet from %s\n", size, from)
+				fmt.Printf("received %d byte udp packet from %s\n", packetBytes, from)
 
-				_ = data
-
-				/*
-				if _, err := conn.WriteToUDP(response, fromAddr); err != nil {
+				// temp: reflect packet back to client to verify that client receives packets
+				if _, err := conn.WriteToUDP(packetData, from); err != nil {
 					core.Error("failed to write udp response packet: %v", err)
 				}
-				*/
 			}
 
 			wg.Done()
+
 		}(i)
 	}
 
-	fmt.Printf("started udp server on port %s\n\n", udpPort)
+	fmt.Printf("started udp server on port %s\n", udpPort)
 
 	// Wait for shutdown signal
 	termChan := make(chan os.Signal, 1)
 	signal.Notify(termChan, os.Interrupt, syscall.SIGTERM)
 	<-termChan
 
-	fmt.Println("shutting down...")
+	fmt.Println("\nshutting down")
 
 	ctxCancelFunc()
 
