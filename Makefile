@@ -5,6 +5,9 @@ CURRENT_DIR = $(shell pwd -P)
 DEPLOY_DIR = ./deploy
 DIST_DIR = ./dist
 
+GATEWAY_PUBLIC_KEY = JVfemQ4P4v5xvcIJwSn6B9kdXHVyzOJMmVIdSlzXaHw=
+GATEWAY_PRIVATE_KEY = "pTtPvyinM74nCB9E+zSY9+XRtN7CXjibRfcZnYbkX9QlV96ZDg/i/nG9wgnBKfoH2R1cdXLM4kyZUh1KXNdofA=="
+
 .PHONY: help
 help:
 	@echo "$$(grep -hE '^\S+:.*##' $(MAKEFILE_LIST) | sed -e 's/:.*##\s*/:/' -e 's/^\(.\+\):\(.*\)/\\033[36m\1\\033[m:\2/' | column -c2 -t -s :)"
@@ -43,18 +46,18 @@ dev-client: build-client ## runs a local client
 
 .PHONY: dev-gateway
 dev-gateway: build-gateway ## runs a local gateway
-	@HTTP_PORT=40000 UDP_PORT=40000 CLIENT_ADDRESS=127.0.0.1:30000 GATEWAY_ADDRESS=127.0.0.1:40000 SERVER_ADDRESS=127.0.0.1:50000 ./dist/gateway
+	HTTP_PORT=40000 UDP_PORT=40000 CLIENT_ADDRESS=127.0.0.1:30000 GATEWAY_ADDRESS=127.0.0.1:40000 SERVER_ADDRESS=127.0.0.1:50000 ./dist/gateway
 
 .PHONY: dev-server
 dev-server: build-server ## runs a local server
-	@HTTP_PORT=50000 UDP_PORT=50000 ./dist/server
+	HTTP_PORT=50000 UDP_PORT=50000 ./dist/server
 
 .PHONY: keygen
 keygen: build-keygen ## generate keypair
 	./dist/keygen
 
 .PHONY: test
-test: ## runs	 unit tests
+test: ## runs unit tests
 	go test ./... -coverprofile ./cover.out -timeout 30s
 
 .PHONY: format
