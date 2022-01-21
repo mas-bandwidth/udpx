@@ -43,6 +43,10 @@ dev-gateway: build-gateway ## runs a local gateway
 dev-server: build-server ## runs a local server
 	@HTTP_PORT=50000 UDP_PORT=50000 ./dist/server
 
+.PHONY: test
+test: ## runs	 unit tests
+	go test ./... -coverprofile ./cover.out -timeout 30s
+
 .PHONY: format
 format:
 	@$(GOFMT) -s -w .

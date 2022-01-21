@@ -166,7 +166,7 @@ func mainReturnWithCode() int {
 
 				packetData := buffer[:packetBytes]
 
-				fmt.Printf("received %d byte udp packet from %s\n", packetBytes, from)
+				fmt.Printf("recv %d byte packet from %s\n", packetBytes, from)
 
 				// todo: process the packet, do reliability etc
 				_ = packetData
