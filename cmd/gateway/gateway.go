@@ -31,6 +31,10 @@
 
 package main
 
+// #cgo pkg-config: libsodium
+// #include <sodium.h>
+import "C"
+
 import (
 	"context"
 	"fmt"
@@ -49,12 +53,32 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+const ChonkleBytes = 15
+const PittleBytes = 2
+const SequenceBytes = 8
+const AckBytes = 8
+const AckBitsBytes = 32
+const SessionIdBytes = 32
 const HMACBytes = 16
-const MinPacketSize = 15 + 32 + 8 + 8 + 32 + HMACBytes + 2
+const PayloadBytes = 100
+const MinPacketSize = ChonkleBytes + SessionIdBytes + SequenceBytes + AckBytes + AckBitsBytes + HMACBytes + PittleBytes
 const MaxPacketSize = 1500
 
-// Allows us to return an exit code and allows log flushes and deferred functions
-// to finish before exiting.
+func Decrypt(senderPublicKey []byte, receiverPrivateKey []byte, nonce []byte, buffer []byte, bytes int) error {
+	result := C.crypto_box_open_easy(
+		(*C.uchar)(&buffer[0]),
+		(*C.uchar)(&buffer[0]),
+		C.ulonglong(bytes),
+		(*C.uchar)(&nonce[0]),
+		(*C.uchar)(&senderPublicKey[0]),
+		(*C.uchar)(&receiverPrivateKey[0]))
+	if result != 0 {
+		return fmt.Errorf("failed to decrypt: result = %d", result)
+	} else {
+		return nil
+	}
+}
+
 func main() {
 	os.Exit(mainReturnWithCode())
 }
@@ -192,6 +216,8 @@ func mainReturnWithCode() int {
 
 				fmt.Printf("recv %d byte packet from %s\n", packetBytes, from)
 
+				// packet filter
+
 				var magic [8]byte
 				
 				var fromAddressData [4]byte
@@ -213,7 +239,27 @@ func mainReturnWithCode() int {
 					continue
 				}
 
+				// decrypt
+
+				senderPublicKey := packetData[ChonkleBytes:ChonkleBytes+SessionIdBytes]
+				nonce := packetData[ChonkleBytes+SessionIdBytes:ChonkleBytes+SessionIdBytes+SequenceBytes]
+				encryptedData := packetData[ChonkleBytes+SessionIdBytes+SequenceBytes:packetBytes-PittleBytes]
+
+				_ = nonce
+				_ = encryptedData
+				_ = senderPublicKey
+
+				fmt.Printf("encrypted data %d bytes\n", len(encryptedData))
+
+				err = Decrypt(senderPublicKey, gatewayPrivateKey, nonce, encryptedData, len(encryptedData))
+				if err != nil {
+					fmt.Printf("decryption failed\n")
+					continue
+				}
+
 				// forward packet to server
+
+				// todo: only forward the relevant bits of the packet, excluding crypto, chonkle/pittle etc...
 
 				if _, err := conn.WriteToUDP(packetData, serverAddress); err != nil {
 					core.Error("failed to write udp response packet: %v", err)
