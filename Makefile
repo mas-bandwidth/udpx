@@ -33,11 +33,11 @@ build-server: dist
 
 .PHONY: dev-client
 dev-client: build-client ## runs a local client
-	UDP_PORT=30000 GATEWAY_ADDRESS=127.0.0.1:40000 ./dist/client
+	UDP_PORT=30000 CLIENT_ADDRESS=127.0.0.1:30000 GATEWAY_ADDRESS=127.0.0.1:40000 ./dist/client
 
 .PHONY: dev-gateway
 dev-gateway: build-gateway ## runs a local gateway
-	@HTTP_PORT=40000 UDP_PORT=40000 SERVER_ADDRESS=127.0.0.1:50000 ./dist/gateway
+	@HTTP_PORT=40000 UDP_PORT=40000 CLIENT_ADDRESS=127.0.0.1:30000 GATEWAY_ADDRESS=127.0.0.1:40000 SERVER_ADDRESS=127.0.0.1:50000 ./dist/gateway
 
 .PHONY: dev-server
 dev-server: build-server ## runs a local server
