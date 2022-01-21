@@ -381,82 +381,71 @@ func GenerateChonkle(output []byte, magic []byte, fromAddressData []byte, fromPo
 
 func BasicPacketFilter(data []byte, packetLength int) bool {
 
-    if packetLength < 18 {
+    if data[0] < 0x2A || data[0] > 0x2D {
         return false
     }
 
-    if data[0] < 0x01 || data[0] > 0x63 {
+    if data[1] < 0xC8 || data[1] > 0xE7 {
         return false
     }
 
-    if data[1] < 0x2A || data[1] > 0x2D {
+    if data[2] < 0x05 || data[2] > 0x44 {
         return false
     }
 
-    if data[2] < 0xC8 || data[2] > 0xE7 {
+    if data[4] < 0x4E || data[4] > 0x51 {
         return false
     }
 
-    if data[3] < 0x05 || data[3] > 0x44 {
+    if data[5] < 0x60 || data[5] > 0xDF {
         return false
     }
 
-    if data[5] < 0x4E || data[5] > 0x51 {
+    if data[6] < 0x64 || data[6] > 0xE3 {
         return false
     }
 
-    if data[6] < 0x60 || data[6] > 0xDF {
+    if data[7] != 0x07 && data[7] != 0x4F {
         return false
     }
 
-    if data[7] < 0x64 || data[7] > 0xE3 {
-        return false
-    }
-
-    if data[8] != 0x07 && data[8] != 0x4F {
-        return false
-    }
-
-    if data[9] != 0x25 && data[9] != 0x53 {
+    if data[8] != 0x25 && data[8] != 0x53 {
         return false
     }
     
-    if data[10] < 0x7C || data[10] > 0x83 {
+    if data[9] < 0x7C || data[9] > 0x83 {
         return false
     }
 
-    if data[11] < 0xAF || data[11] > 0xB6 {
+    if data[10] < 0xAF || data[10] > 0xB6 {
         return false
     }
 
-    if data[12] < 0x21 || data[12] > 0x60 {
+    if data[11] < 0x21 || data[11] > 0x60 {
         return false
     }
 
-    if data[13] != 0x61 && data[13] != 0x05 && data[13] != 0x2B && data[13] != 0x0D {
+    if data[12] != 0x61 && data[12] != 0x05 && data[12] != 0x2B && data[12] != 0x0D {
         return false
     }
 
-    if data[14] < 0xD2 || data[14] > 0xF1 {
+    if data[13] < 0xD2 || data[13] > 0xF1 {
         return false
     }
 
-    if data[15] < 0x11 || data[15] > 0x90 {
+    if data[14] < 0x11 || data[14] > 0x90 {
         return false
     }
-
+ 
     return true
 }
 
 func AdvancedPacketFilter(data []byte, magic []byte, fromAddress []byte, fromPort uint16, toAddress []byte, toPort uint16, packetLength int) bool {
-    if packetLength < 18 {
-        return false;
-    }
     var a [15]byte
     var b [2]byte
     GenerateChonkle(a[:], magic, fromAddress, fromPort, toAddress, toPort, packetLength)
     GeneratePittle(b[:], fromAddress, fromPort, toAddress, toPort, packetLength)
-    if bytes.Compare(a[0:15], data[1:16]) != 0 {
+    if bytes.Compare(a[0:15], data[0:15]) != 0 {
         return false
     }
     if bytes.Compare(b[0:2], data[packetLength-2:packetLength]) != 0 {
@@ -465,12 +454,11 @@ func AdvancedPacketFilter(data []byte, magic []byte, fromAddress []byte, fromPor
     return true;
 }
 
-func GetAddressData(address *net.UDPAddr, addressData []byte, addressPort *uint16, addressBytes *int) {
+func GetAddressData(address *net.UDPAddr, addressData []byte, addressPort *uint16) {
 	// todo: ipv6 support
 	addressData[0] = address.IP[0]
 	addressData[1] = address.IP[1]
 	addressData[2] = address.IP[2]
 	addressData[3] = address.IP[3]
 	*addressPort = uint16(address.Port)
-	*addressBytes = 4
 }
