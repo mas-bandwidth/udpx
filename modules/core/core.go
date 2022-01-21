@@ -1,7 +1,7 @@
 /*
-   UDPX is Copyright (c) 2022, Network Next, Inc. All rights reserved.
+   Copyright (c) 2022, Network Next, Inc. All rights reserved.
 
-   UDPX is open source software licensed under the BSD 3-Clause License.
+   This is open source software licensed under the BSD 3-Clause License.
 
 	Redistribution and use in source and binary forms, with or without
 	modification, are permitted provided that the following conditions are met:
