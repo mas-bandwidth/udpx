@@ -49,7 +49,8 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-const MinPacketSize = 15 + 32 + 8 + 8 + 32 + 2
+const HMACBytes = 16
+const MinPacketSize = 15 + 32 + 8 + 8 + 32 + HMACBytes + 2
 const MaxPacketSize = 1500
 
 // Allows us to return an exit code and allows log flushes and deferred functions
