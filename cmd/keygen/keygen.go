@@ -35,6 +35,7 @@ import (
 	"fmt"
 	"os"
 	"crypto/ed25519"
+	"encoding/base64"
 )
 
 func main() {
@@ -45,8 +46,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Printf("yo\n")
+	publicKey_base64 := base64.StdEncoding.EncodeToString(publicKey)
+	privateKey_base64 := base64.StdEncoding.EncodeToString(privateKey)
 
-	_ = publicKey
-	_ = privateKey
+	fmt.Printf("public key: %s\n", publicKey_base64)
+	fmt.Printf("private key: %s\n", privateKey_base64)
 }
