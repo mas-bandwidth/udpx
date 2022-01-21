@@ -49,6 +49,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+const MinPacketSize = 15 + 32 + 8 + 2
 const MaxPacketSize = 1500
 
 // Allows us to return an exit code and allows log flushes and deferred functions
@@ -62,6 +63,12 @@ func mainReturnWithCode() int {
 	serviceName := "udpx gateway"
 
 	fmt.Printf("%s\n", serviceName)
+
+	gatewayAddress, err := envvar.GetAddress("GATEWAY_ADDRESS", core.ParseAddress("127.0.0.1:40000"))
+	if err != nil {
+		core.Error("invalid GATEWAY_ADDRESS: %v", err)
+		return 1
+	}
 
 	serverAddress, err := envvar.GetAddress("SERVER_ADDRESS", core.ParseAddress("127.0.0.1:40000"))
 	if err != nil {
@@ -166,7 +173,8 @@ func mainReturnWithCode() int {
 					break
 				}
 
-				if packetBytes <= 0 {
+				if packetBytes < MinPacketSize {
+					fmt.Printf("packet is too small\n")
 					continue
 				}
 
@@ -174,7 +182,26 @@ func mainReturnWithCode() int {
 
 				fmt.Printf("recv %d byte packet from %s\n", packetBytes, from)
 
-				// todo: various stateless checks on packet to drop if it isn't valid
+				var magic [8]byte
+				
+				var fromAddressData [4]byte
+				var fromAddressPort uint16
+		
+				var toAddressData [4]byte
+				var toAddressPort uint16
+		
+				core.GetAddressData(from, fromAddressData[:], &fromAddressPort)
+				core.GetAddressData(gatewayAddress, toAddressData[:], &toAddressPort)
+
+				if !core.BasicPacketFilter(packetData, packetBytes) {
+					fmt.Printf("basic packet filter failed\n")
+					continue
+				}
+
+				if !core.AdvancedPacketFilter(packetData, magic[:], fromAddressData[:], fromAddressPort, toAddressData[:], toAddressPort, packetBytes) {
+					fmt.Printf("advanced packet filter failed\n")
+					continue
+				}
 
 				// forward packet to server
 
