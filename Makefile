@@ -31,6 +31,12 @@ build-server: dist
 	@$(GO) build -o ${DIST_DIR}/server ./cmd/server/server.go
 	@printf "done\n"
 
+.PHONY: build-keygen
+build-keygen: dist
+	@printf "Building kegen... "
+	@$(GO) build -o ${DIST_DIR}/keygen ./cmd/keygen/keygen.go
+	@printf "done\n"
+
 .PHONY: dev-client
 dev-client: build-client ## runs a local client
 	UDP_PORT=30000 CLIENT_ADDRESS=127.0.0.1:30000 GATEWAY_ADDRESS=127.0.0.1:40000 ./dist/client
@@ -42,6 +48,10 @@ dev-gateway: build-gateway ## runs a local gateway
 .PHONY: dev-server
 dev-server: build-server ## runs a local server
 	@HTTP_PORT=50000 UDP_PORT=50000 ./dist/server
+
+.PHONY: keygen
+keygen: build-keygen ## generate keypair
+	./dist/keygen
 
 .PHONY: test
 test: ## runs	 unit tests
