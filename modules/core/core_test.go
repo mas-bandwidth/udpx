@@ -80,7 +80,7 @@ func TestChonkle(t *testing.T) {
     	fromPort := uint16(i+1000000)
     	toPort := uint16(i+5000)
     	packetLength := 18 + ( i % ( len(output) - 18 ) )
-    	GenerateChonkle(output[1:], magic[:], fromAddress[:], fromPort, toAddress[:], toPort, packetLength)
+    	GenerateChonkle(output[:], magic[:], fromAddress[:], fromPort, toAddress[:], toPort, packetLength)
     	assert.Equal(t, true, BasicPacketFilter(output[:], packetLength))
 	}
 }
