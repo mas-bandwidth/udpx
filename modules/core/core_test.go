@@ -12,10 +12,6 @@ func FuckOffGolang() {
 	fmt.Fprintf(os.Stdout, "I'm sick of adding and removing the fmt and os imports as I work")
 }
 
-func TestSomething(t *testing.T) {
-	// ...
-}
-
 func randomBytes(buffer []byte) {
 	for i := 0; i < len(buffer); i++ {
 		buffer[i] = byte(rand.Intn(256))

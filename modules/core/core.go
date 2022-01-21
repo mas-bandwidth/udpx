@@ -435,34 +435,11 @@ func AdvancedPacketFilter(data []byte, magic []byte, fromAddress []byte, fromPor
 }
 
 func GetAddressData(address *net.UDPAddr, addressData []byte, addressPort *uint16, addressBytes *int) {
-
-	// todo
-	*addressPort = 0
-	*addressBytes = 0
-
-	/*
-    next_assert( address );
-    if ( address->type == NEXT_ADDRESS_IPV4 )
-    {
-        address_data[0] = address->data.ipv4[0];
-        address_data[1] = address->data.ipv4[1];
-        address_data[2] = address->data.ipv4[2];
-        address_data[3] = address->data.ipv4[3];
-        *address_bytes = 4;
-    }
-    else if ( address->type == NEXT_ADDRESS_IPV6 )
-    {
-        for ( int i = 0; i < 8; ++i )
-        {
-            address_data[i*2]   = address->data.ipv6[i] >> 8;
-            address_data[i*2+1] = address->data.ipv6[i] & 0xFF;
-        }
-        *address_bytes = 16;
-    }
-    else
-    {
-        *address_bytes = 0;
-    }
-    *address_port = address->port;
-    */
+	// todo: ipv6 support
+	addressData[0] = address.IP[0]
+	addressData[1] = address.IP[1]
+	addressData[2] = address.IP[2]
+	addressData[3] = address.IP[3]
+	*addressPort = uint16(address.Port)
+	*addressBytes = 4
 }
