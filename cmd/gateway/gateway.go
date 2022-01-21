@@ -76,6 +76,15 @@ func mainReturnWithCode() int {
 		return 1
 	}
 
+	gatewayPrivateKey, err := envvar.GetBase64("GATEWAY_PRIVATE_KEY", nil)
+	if err != nil || len(gatewayPrivateKey) != 64 {
+		core.Error("missing or invalid GATEWAY_PRIVATE_KEY: %v\n", err)
+		return 1
+	}
+
+	// todo
+	_ = gatewayPrivateKey
+
 	ctx, ctxCancelFunc := context.WithCancel(context.Background())
 
 	// Start HTTP server
