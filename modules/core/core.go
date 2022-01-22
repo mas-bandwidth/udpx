@@ -47,18 +47,14 @@ import (
 	"encoding/binary"
 )
 
-func Encrypt(senderPrivateKey []byte, receiverPublicKey []byte, nonce []byte, buffer []byte, bytes int) error {
-	result := C.crypto_box_easy((*C.uchar)(&buffer[0]),
+func Encrypt(senderPrivateKey []byte, receiverPublicKey []byte, nonce []byte, buffer []byte, bytes int) int {
+	C.crypto_box_easy((*C.uchar)(&buffer[0]),
 		(*C.uchar)(&buffer[0]),
 		C.ulonglong(bytes),
 		(*C.uchar)(&nonce[0]),
 		(*C.uchar)(&receiverPublicKey[0]),
 		(*C.uchar)(&senderPrivateKey[0]))
-	if result != 0 {
-		return fmt.Errorf("failed to encrypt: result = %d", result)
-	} else {
-		return nil
-	}
+	return bytes + C.crypto_box_MACBYTES
 }
 
 func Decrypt(senderPublicKey []byte, receiverPrivateKey []byte, nonce []byte, buffer []byte, bytes int) error {

@@ -59,6 +59,7 @@ const SequenceBytes = 8
 const AckBytes = 8
 const AckBitsBytes = 32
 const SessionIdBytes = 32
+const NonceBytes = 24
 const HMACBytes = 16
 const PayloadBytes = 100
 const MinPacketSize = ChonkleBytes + SessionIdBytes + SequenceBytes + AckBytes + AckBitsBytes + HMACBytes + PittleBytes
@@ -227,14 +228,13 @@ func mainReturnWithCode() int {
 				// decrypt
 
 				senderPublicKey := packetData[ChonkleBytes:ChonkleBytes+SessionIdBytes]
-				nonce := packetData[ChonkleBytes+SessionIdBytes:ChonkleBytes+SessionIdBytes+SequenceBytes]
+				sequenceData := packetData[ChonkleBytes+SessionIdBytes:ChonkleBytes+SessionIdBytes+SequenceBytes]
 				encryptedData := packetData[ChonkleBytes+SessionIdBytes+SequenceBytes:packetBytes-PittleBytes]
 
-				_ = nonce
-				_ = encryptedData
-				_ = senderPublicKey
-
-				fmt.Printf("encrypted data %d bytes\n", len(encryptedData))
+				nonce := make([]byte, NonceBytes)
+				for i := 0; i < 8; i++ {
+					nonce[i] = sequenceData[i]
+				}
 
 				err = core.Decrypt(senderPublicKey, gatewayPrivateKey, nonce, encryptedData, len(encryptedData))
 				if err != nil {

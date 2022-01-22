@@ -36,6 +36,7 @@ import (
 	"testing"
 	"os"
 	"math/rand"
+	"crypto/ed25519"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -163,4 +164,48 @@ func TestAdvancedBasicPacketFilter(t *testing.T) {
     	assert.Equal(t, false, BasicPacketFilter(output[:], packetLength))
     	assert.Equal(t, false, AdvancedPacketFilter(output[:], magic[:], fromAddress[:], fromPort, toAddress[:], toPort, packetLength))
 	}
+}
+
+func TestEncrypt(t *testing.T) {
+
+	// todo: keygen is at fault
+	senderPublicKey, senderPrivateKey, _ := ed25519.GenerateKey(nil)
+	receiverPublicKey, receiverPrivateKey, _ := ed25519.GenerateKey(nil)
+
+	// encrypt random data and verify we can decrypt it
+
+	nonce := RandomBytes(24)
+
+	data := make([]byte, 256)
+	for i := range data {
+		data[i] = byte(data[i])
+	}
+
+	encryptedData := make([]byte, 256+16)
+
+	encryptedBytes := Encrypt(senderPrivateKey[:], receiverPublicKey[:], nonce, encryptedData, len(data))
+
+	assert.Equal(t, 256+16, encryptedBytes)
+
+	err := Decrypt(senderPublicKey[:], receiverPrivateKey[:], nonce, encryptedData, encryptedBytes)
+
+	assert.NoError(t, err)
+
+	// decryption should fail with garbage data
+
+	garbageData := RandomBytes(256+16)
+
+	err = Decrypt(senderPublicKey[:], receiverPrivateKey[:], nonce, garbageData, encryptedBytes)
+
+	assert.Error(t, err)
+
+	// decryption should fail with the wrong receiver private key
+
+	for i := 0; i < 32; i++ {
+		receiverPrivateKey[i] = byte(i)
+	}
+
+	err = Decrypt(senderPublicKey[:], receiverPrivateKey[:], nonce, encryptedData, encryptedBytes)
+
+	assert.Error(t, err)
 }
