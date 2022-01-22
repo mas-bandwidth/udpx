@@ -31,6 +31,10 @@
 
 package core
 
+// #cgo pkg-config: libsodium
+// #include <sodium.h>
+import "C"
+
 import (
 	"fmt"
 	"net"
@@ -42,6 +46,35 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 )
+
+func Encrypt(senderPrivateKey []byte, receiverPublicKey []byte, nonce []byte, buffer []byte, bytes int) error {
+	result := C.crypto_box_easy((*C.uchar)(&buffer[0]),
+		(*C.uchar)(&buffer[0]),
+		C.ulonglong(bytes),
+		(*C.uchar)(&nonce[0]),
+		(*C.uchar)(&receiverPublicKey[0]),
+		(*C.uchar)(&senderPrivateKey[0]))
+	if result != 0 {
+		return fmt.Errorf("failed to encrypt: result = %d", result)
+	} else {
+		return nil
+	}
+}
+
+func Decrypt(senderPublicKey []byte, receiverPrivateKey []byte, nonce []byte, buffer []byte, bytes int) error {
+	result := C.crypto_box_open_easy(
+		(*C.uchar)(&buffer[0]),
+		(*C.uchar)(&buffer[0]),
+		C.ulonglong(bytes),
+		(*C.uchar)(&nonce[0]),
+		(*C.uchar)(&senderPublicKey[0]),
+		(*C.uchar)(&receiverPrivateKey[0]))
+	if result != 0 {
+		return fmt.Errorf("failed to decrypt: result = %d", result)
+	} else {
+		return nil
+	}
+}
 
 var debugLogs bool
 

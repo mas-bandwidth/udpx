@@ -64,21 +64,6 @@ const PayloadBytes = 100
 const MinPacketSize = ChonkleBytes + SessionIdBytes + SequenceBytes + AckBytes + AckBitsBytes + HMACBytes + PittleBytes
 const MaxPacketSize = 1500
 
-func Decrypt(senderPublicKey []byte, receiverPrivateKey []byte, nonce []byte, buffer []byte, bytes int) error {
-	result := C.crypto_box_open_easy(
-		(*C.uchar)(&buffer[0]),
-		(*C.uchar)(&buffer[0]),
-		C.ulonglong(bytes),
-		(*C.uchar)(&nonce[0]),
-		(*C.uchar)(&senderPublicKey[0]),
-		(*C.uchar)(&receiverPrivateKey[0]))
-	if result != 0 {
-		return fmt.Errorf("failed to decrypt: result = %d", result)
-	} else {
-		return nil
-	}
-}
-
 func main() {
 	os.Exit(mainReturnWithCode())
 }
@@ -251,7 +236,7 @@ func mainReturnWithCode() int {
 
 				fmt.Printf("encrypted data %d bytes\n", len(encryptedData))
 
-				err = Decrypt(senderPublicKey, gatewayPrivateKey, nonce, encryptedData, len(encryptedData))
+				err = core.Decrypt(senderPublicKey, gatewayPrivateKey, nonce, encryptedData, len(encryptedData))
 				if err != nil {
 					fmt.Printf("decryption failed\n")
 					continue
