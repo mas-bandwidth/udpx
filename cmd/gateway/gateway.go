@@ -88,7 +88,7 @@ func mainReturnWithCode() int {
 	}
 
 	gatewayPrivateKey, err := envvar.GetBase64("GATEWAY_PRIVATE_KEY", nil)
-	if err != nil || len(gatewayPrivateKey) != 64 {
+	if err != nil || len(gatewayPrivateKey) != core.PrivateKeyBytes {
 		core.Error("missing or invalid GATEWAY_PRIVATE_KEY: %v\n", err)
 		return 1
 	}

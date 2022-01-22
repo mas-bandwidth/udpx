@@ -33,18 +33,13 @@ package main
 
 import (
 	"fmt"
-	"os"
-	"crypto/ed25519"
 	"encoding/base64"
+	"github.com/networknext/udpx/modules/core"
 )
 
 func main() {
 
-	publicKey, privateKey, err := ed25519.GenerateKey(nil)
-	if err != nil {
-		fmt.Printf("could not generate keypair\n")
-		os.Exit(1)
-	}
+	publicKey, privateKey := core.Keygen()
 
 	publicKey_base64 := base64.StdEncoding.EncodeToString(publicKey)
 	privateKey_base64 := base64.StdEncoding.EncodeToString(privateKey)
