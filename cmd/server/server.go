@@ -166,11 +166,23 @@ func mainReturnWithCode() int {
 
 				packetData := buffer[:packetBytes]
 
-				fmt.Printf("recv %d byte packet from %s\n", packetBytes, from)
+				index := 0
 
-				// todo: process the packet, do reliability etc
+				var sessionId [core.SessionIdBytes]byte
+				var sequence uint64
+				var ack uint64
+				var ack_bits [core.AckBitsBytes]byte
+
+				core.ReadBytes(packetData, &index, sessionId[:], core.SessionIdBytes)
+				core.ReadUint64(packetData, &index, &sequence)
+				core.ReadUint64(packetData, &index, &ack)
+				core.ReadBytes(packetData, &index, ack_bits[:], core.AckBitsBytes)
+
+				fmt.Printf("received packet %d from %s\n", sequence, core.SessionIdString(sessionId[:]))
+
+				// todo: process the packet, do reliability etc...
 				_ = packetData
-
+				_ = from
 			}
 
 			wg.Done()

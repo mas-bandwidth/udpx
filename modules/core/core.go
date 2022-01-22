@@ -54,6 +54,9 @@ const HMACBytes = 16
 const MagicBytes = 8
 const ChonkleBytes = 15
 const PittleBytes = 2
+const SequenceBytes = 8
+const SessionIdBytes = 32
+const AckBitsBytes = 32
 
 func Keygen() ([]byte, []byte) {
 	var publicKey [PublicKeyBytes]byte
@@ -299,13 +302,12 @@ func ReadString(data []byte, index *int, value *string, maxStringLength uint32) 
 	return true
 }
 
-func ReadBytes(data []byte, index *int, value *[]byte, bytes uint32) bool {
+func ReadBytes(data []byte, index *int, value []byte, bytes uint32) bool {
 	if *index+int(bytes) > len(data) {
 		return false
 	}
-	*value = make([]byte, bytes)
 	for i := uint32(0); i < bytes; i++ {
-		(*value)[i] = data[*index]
+		value[i] = data[*index]
 		*index++
 	}
 	return true
@@ -506,4 +508,40 @@ func GetAddressData(address *net.UDPAddr, addressData []byte, addressPort *uint1
 	addressData[2] = address.IP[2]
 	addressData[3] = address.IP[3]
 	*addressPort = uint16(address.Port)
+}
+
+func SessionIdString(sessionId []byte) string {
+	return fmt.Sprintf("%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x",
+		sessionId[0],
+		sessionId[1],
+		sessionId[2],
+		sessionId[3],
+		sessionId[4],
+		sessionId[5],
+		sessionId[6],
+		sessionId[7],
+		sessionId[8],
+		sessionId[9],
+		sessionId[10],
+		sessionId[11],
+		sessionId[12],
+		sessionId[13],
+		sessionId[14],
+		sessionId[15],
+		sessionId[16],
+		sessionId[17],
+		sessionId[18],
+		sessionId[19],
+		sessionId[20],
+		sessionId[21],
+		sessionId[22],
+		sessionId[23],
+		sessionId[24],
+		sessionId[25],
+		sessionId[26],
+		sessionId[27],
+		sessionId[28],
+		sessionId[29],
+		sessionId[30],
+		sessionId[31])
 }
