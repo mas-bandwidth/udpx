@@ -47,6 +47,17 @@ import (
 	"encoding/binary"
 )
 
+const PublicKeyBytes = 32
+const PrivateKeyBytes = 32
+
+func Keygen() ([]byte, []byte) {
+	var publicKey [PublicKeyBytes]byte
+	var privateKey [PrivateKeyBytes]byte
+	C.crypto_box_keypair((*C.uchar)(&publicKey[0]),
+		(*C.uchar)(&privateKey[0]))
+	return publicKey[:], privateKey[:]
+}
+
 func Encrypt(senderPrivateKey []byte, receiverPublicKey []byte, nonce []byte, buffer []byte, bytes int) int {
 	C.crypto_box_easy((*C.uchar)(&buffer[0]),
 		(*C.uchar)(&buffer[0]),

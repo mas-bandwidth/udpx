@@ -36,7 +36,6 @@ import (
 	"testing"
 	"os"
 	"math/rand"
-	"crypto/ed25519"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -168,9 +167,8 @@ func TestAdvancedBasicPacketFilter(t *testing.T) {
 
 func TestEncrypt(t *testing.T) {
 
-	// todo: keygen is at fault
-	senderPublicKey, senderPrivateKey, _ := ed25519.GenerateKey(nil)
-	receiverPublicKey, receiverPrivateKey, _ := ed25519.GenerateKey(nil)
+	senderPublicKey, senderPrivateKey := Keygen()
+	receiverPublicKey, receiverPrivateKey := Keygen()
 
 	// encrypt random data and verify we can decrypt it
 
