@@ -52,6 +52,8 @@ const PrivateKeyBytes = 32
 const NonceBytes = 24
 const HMACBytes = 16
 const MagicBytes = 8
+const ChonkleBytes = 15
+const PittleBytes = 2
 
 func Keygen() ([]byte, []byte) {
 	var publicKey [PublicKeyBytes]byte

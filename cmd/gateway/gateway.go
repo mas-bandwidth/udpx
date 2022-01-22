@@ -242,14 +242,15 @@ func mainReturnWithCode() int {
 					continue
 				}
 
-				// forward packet to server
+				// forward payload to server
 
-				// todo: only forward the relevant bits of the packet, excluding crypto, chonkle/pittle etc...
+				packetData = packetData[core.ChonkleBytes:packetBytes-core.PittleBytes-core.HMACBytes]
+				packetBytes = len(packetData)
 
 				if _, err := conn.WriteToUDP(packetData, serverAddress); err != nil {
-					core.Error("failed to write udp response packet: %v", err)
+					core.Error("failed to forward payload to server: %v", err)
 				}
-				fmt.Printf("send %d byte packet to %s\n", packetBytes, serverAddress)
+				fmt.Printf("send %d byte payload to %s\n", packetBytes, serverAddress)
 			}
 
 			wg.Done()
