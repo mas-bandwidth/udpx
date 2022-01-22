@@ -1,0 +1,114 @@
+DONE
+
+	Work out why gateway can't decrypt the packet...
+
+	Move crypto stuff into core.go
+
+	Implement a simple encrypt/decrypt test.
+
+	The wrong keygen was being used. Fixed with core.Keygen
+
+	Forward packet from gateway to server, with the prefix/postfix stripped off
+
+	(server does not need chonkle, pittle, or any of the crypto stuff...)
+
+	Print out the session id and sequence number received on the server.
+
+	The server should be able to send packets down to the client
+
+	In order to do this, there needs to be a separate *internal* socket on the gateway, for the server to send packets to, which will be sent back down to the client...
+
+	This is because the client NAT will *not* function unless the client receives packets back from the same address it sent packets to.
+
+	This implies that the client gateway cannot be behind a UDP load balancer...
+
+	For the moment, code assuming that there is a single instance of the gateway.
+
+	But there is definitely complexity here, if the gateway can't be behind a udp load balancer.
+
+	This is kinda annoying.
+
+	-----------
+
+	Start with the simplest thing which is a second internal socket, that receives packets sent to it from teh server, and forwards them back down to the client, via the gateway socket, so NAT works.
+
+	To make this work transparently, the gateway should include the internal address to send packets back to at the front of the payload packet.
+
+	This way the server need not know anything about the gateway or make any decisions about how to reply to. It is stateless.
+
+	-----------
+
+	Cool solution that enables UDP load balancing to work with NAT.
+
+	https://cloud.google.com/architecture/udp-with-network-load-balancing
+
+	It's possible to rewrite the source address so it returns the address of the LB, not the VM.
+
+	This will enable the gateway to have a UDP load balancer in front of it, and to horizontally scale!
+
+	-----------
+
+TODO
+
+	------------------------
+
+	Implement end-to-end some way for the server to send packets back to the client, via the gateway.
+
+	------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+===============================================
+
+	------------------------
+
+	Interesting question. Where does the server sequence come from, for server -> client packets?
+
+	It can't really actually be stateless, so it must support upgrading when the gateway changes.
+
+	The idea I think here is that we can have a token sent back down to the client, and reflected back up (most recent token), and this will provide an anchor for the server sequence updated say at round trip, or once per-second.
+
+	------------------------
+
+	I think this whole state and token thing sort of requires the challenge/response to be done, to determine a real connection, and to persist that connection in some manner that is stateless.
+
+	This seems to be the important thing to do next, since it is foundational for everything else.
+
+	------------------------
+
+	OK. Now that the server is getting the payloads that it needs, it's time to think about the server.
+
+	The job of the server is to:
+
+		a) only respond to clients who have a real connection (eg. challenge/response...)
+
+		b) "instantly" transition a client from one IP:port to another without any delays or hitches in packet delivery.
+
+		c) "instantly" transition from one server instance to another, in the case of a server instance failing, going down, becoming unhealthy or crashing out, without any delays or hitches in packet delivery.
+
+		d) be stateless as much as possible, so server instances can be scaled out horizontally.
+
+		e) only accept messages that conform to the schema of the server (eg. the set of messages that the client may send to the server...)
+
+		f) queue up messages to an internal message processing system, on some fully reliable packet delivery system (be it TCP, HTTPS batched, zeromq, whatever...), and only ack packets sent from the client when they have been guaranteed delivered via the queue system.
+
+		g) send down packets to the client including acks and ack_bits, so the client knows what packets have been received by the server, and what packets were dropped.
+
+	------------------------
+
+	Cool golang stuff to research...
+
+	https://dev.to/panjf2000/releasing-a-high-performance-lightweight-non-blocking-and-event-loop-networking-library-written-in-pure-go-4beb
+
+	https://dev.to/panjf2000/releasing-a-high-performance-goroutine-pool-in-go-n57
+
+	https://golangrepo.com/repo/lesismal-nbio-go-network#nbio---non-blocking-io
