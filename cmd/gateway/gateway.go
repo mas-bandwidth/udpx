@@ -81,6 +81,15 @@ func mainReturnWithCode() int {
 		return 1
 	}
 
+	gatewayInternalAddress, err := envvar.GetAddress("GATEWAY_INTERNAL_ADDRESS", core.ParseAddress("127.0.0.1:40001"))
+	if err != nil {
+		core.Error("invalid GATEWAY_INTERNAL_ADDRESS: %v", err)
+		return 1
+	}
+
+	// todo
+	_ = gatewayInternalAddress
+
 	serverAddress, err := envvar.GetAddress("SERVER_ADDRESS", core.ParseAddress("127.0.0.1:40000"))
 	if err != nil {
 		core.Error("invalid SERVER_ADDRESS: %v", err)

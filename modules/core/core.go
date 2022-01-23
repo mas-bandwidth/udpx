@@ -57,6 +57,7 @@ const PittleBytes = 2
 const SequenceBytes = 8
 const SessionIdBytes = 32
 const AckBitsBytes = 32
+const AddressBytes = 19
 
 func Keygen() ([]byte, []byte) {
 	var publicKey [PublicKeyBytes]byte
