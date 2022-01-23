@@ -91,44 +91,31 @@ DONE
 
 	Verify the client receives the dummy 100 byte payload from the server.
 
-TODO
-
 	The client receives the 100 byte payload on the internal address.
 
 	Change it so that the packet is forwarded from the public address sockets.
 
 	This implies that there is a one-to-one ratio of internal and public sockets on the gateway, eg. internal[i] -> public[i] socket for sending.
 
-	-----------
-
 	Verify the client gets the 100 byte payload from the gateway address 127.0.0.1:40000 not 40001 (internal).
 
-	-----------
+TODO
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	========================
-
-	Implement a challenge response before the gateway will forward packets to the server.
+	------------------------
+	
+	Implement a challenge response before the gateway is allowed to forward packets to the server.
 
 	This can be done with a small crypto token that gets refreshed periodically...
+
+	If the token is absent, then a challenge/response can be performed. 
+
+	If the token is invalid or stale, then the packet can be dropped.
+
+	(How to restrict this challenge/response so that it only is sent say, once per-second, no matter how many challenges are sent for this session id, or address?)
+
+	(Attack on this protocol. Send many small but valid "knocks" to the server, and create instances of sessions that don't convert, or convert to valid as slowly as possible...)
+
+	This seems to have a lot of parallels to HTTP attacks...
 
 	------------------------
 

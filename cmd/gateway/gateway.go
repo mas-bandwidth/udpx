@@ -154,6 +154,8 @@ func mainReturnWithCode() int {
 
 	wg.Add(numThreads)
 
+	publicSocket := make([]*net.UDPConn, numThreads)
+
 	{
 		lc := net.ListenConfig{
 			Control: func(network string, address string, c syscall.RawConn) error {
@@ -175,23 +177,31 @@ func mainReturnWithCode() int {
 
 		for i := 0; i < numThreads; i++ {
 
+			lp, err := lc.ListenPacket(ctx, "udp", "0.0.0.0:"+udpPort)
+			if err != nil {
+				panic(fmt.Sprintf("could not bind socket: %v", err))
+			}
+
+			conn := lp.(*net.UDPConn)
+
+			if err := conn.SetReadBuffer(readBuffer); err != nil {
+				panic(fmt.Sprintf("could not set connection read buffer size: %v", err))
+			}
+
+			if err := conn.SetWriteBuffer(writeBuffer); err != nil {
+				panic(fmt.Sprintf("could not set connection write buffer size: %v", err))
+			}
+
+			publicSocket[i] = conn
+		}	
+
+		for i := 0; i < numThreads; i++ {
+
 			go func(thread int) {
 
-				lp, err := lc.ListenPacket(ctx, "udp", "0.0.0.0:"+udpPort)
-				if err != nil {
-					panic(fmt.Sprintf("could not bind socket: %v", err))
-				}
+				conn := publicSocket[thread]
 
-				conn := lp.(*net.UDPConn)
 				defer conn.Close()
-
-				if err := conn.SetReadBuffer(readBuffer); err != nil {
-					panic(fmt.Sprintf("could not set connection read buffer size: %v", err))
-				}
-
-				if err := conn.SetWriteBuffer(writeBuffer); err != nil {
-					panic(fmt.Sprintf("could not set connection write buffer size: %v", err))
-				}
 
 				buffer := [MaxPacketSize]byte{}
 
@@ -276,7 +286,7 @@ func mainReturnWithCode() int {
 					if _, err := conn.WriteToUDP(forwardPacketData, serverAddress); err != nil {
 						core.Error("failed to forward payload to server: %v", err)
 					}
-					fmt.Printf("send %d byte payload to %s\n", payloadBytes, serverAddress)
+					fmt.Printf("send %d byte payload to %s\n", payloadBytes, serverAddress.String())
 				}
 
 				wg.Done()
@@ -342,7 +352,7 @@ func mainReturnWithCode() int {
 
 					packetData := buffer[:packetBytes]
 
-					fmt.Printf("recv internal %d byte packet from %s\n", packetBytes, from)
+					fmt.Printf("recv internal %d byte packet from %s\n", packetBytes, from.String())
 
 					if packetBytes <= 19 {
 						fmt.Printf("internal packet is too small\n")
@@ -358,10 +368,10 @@ func mainReturnWithCode() int {
 					packetData = packetData[index:]
 					packetBytes = len(packetData)
 
-					if _, err := conn.WriteToUDP(packetData, &clientAddress); err != nil {
+					if _, err := publicSocket[thread].WriteToUDP(packetData, &clientAddress); err != nil {
 						core.Error("failed to forward packet to client: %v", err)
 					}
-					fmt.Printf("send %d byte packet to %s\n", packetBytes, clientAddress)
+					fmt.Printf("send %d byte packet to %s\n", packetBytes, clientAddress.String())
 				}
 
 				wg.Done()
