@@ -54,20 +54,16 @@ DONE
 
 	It is 19 bytes, whether ipv4 or ipv6, just how I want it.
 
-TODO
-
-	------------------------
-
 	Packets sent from gateway to server should include both:
 
 	 - internal gateway address for responses to go to
 	 - address + port of the client corresponding to the packet
 
-	------------------------
-
 	Extend server to read past the internal gateway address and the client address, to get payload.
 
 	Extend server to respond to the gateway internal address, with a dummy 100 byte payload prefixed by the client address.
+
+TODO
 
 	------------------------
 
@@ -75,15 +71,11 @@ TODO
 
 	------------------------
 
-	When a packet is received on the gateway internal address, the first 19 bytes is the client address to forward it to.
-
-	Implement this forwarding
+	When a packet is received on the gateway internal address, read the client address from the first 19 bytes and forward the packet to the client.
 
 	------------------------
 
-	Verify the gateway receives the packets and forwards them to the client.
-
-	Verify the client receives packets from the server.
+	Verify the client receives the dummy 100 byte payload from the server.
 
 	------------------------
 

@@ -154,7 +154,7 @@ func mainReturnWithCode() int {
 
 			for {
 
-				packetBytes, from, err := conn.ReadFromUDP(buffer[:])
+				packetBytes, _, err := conn.ReadFromUDP(buffer[:])
 				if err != nil {
 					core.Error("failed to read udp packet: %v", err)
 					break
@@ -168,11 +168,15 @@ func mainReturnWithCode() int {
 
 				index := 0
 
+				var gatewayInternalAddress net.UDPAddr
+				var clientAddress net.UDPAddr
 				var sessionId [core.SessionIdBytes]byte
 				var sequence uint64
 				var ack uint64
 				var ack_bits [core.AckBitsBytes]byte
 
+				core.ReadAddress(packetData, &index, &gatewayInternalAddress)
+				core.ReadAddress(packetData, &index, &clientAddress)
 				core.ReadBytes(packetData, &index, sessionId[:], core.SessionIdBytes)
 				core.ReadUint64(packetData, &index, &sequence)
 				core.ReadUint64(packetData, &index, &ack)
@@ -180,9 +184,25 @@ func mainReturnWithCode() int {
 
 				fmt.Printf("received packet %d from %s\n", sequence, core.SessionIdString(sessionId[:]))
 
-				// todo: process the packet, do reliability etc...
-				_ = packetData
-				_ = from
+				// temporary: dummy response to test server -> gateway -> client packet delivery
+
+				responsePacketData := make([]byte, MaxPacketSize)
+
+				index = 0
+
+				dummyPayload := make([]byte, 100)
+
+				core.WriteAddress(responsePacketData,&index, &clientAddress)
+				core.WriteBytes(responsePacketData, &index, dummyPayload, len(dummyPayload))
+
+				responsePacketBytes := index
+				responsePacketData = responsePacketData[:responsePacketBytes]
+
+				if _, err := conn.WriteToUDP(responsePacketData, &gatewayInternalAddress); err != nil {
+					core.Error("failed to send response payload to gateway: %v", err)
+				}
+				fmt.Printf("send %d byte response to %s\n", responsePacketBytes, gatewayInternalAddress.String())
+
 			}
 
 			wg.Done()

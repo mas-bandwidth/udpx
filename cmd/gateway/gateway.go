@@ -87,9 +87,6 @@ func mainReturnWithCode() int {
 		return 1
 	}
 
-	// todo
-	_ = gatewayInternalAddress
-
 	serverAddress, err := envvar.GetAddress("SERVER_ADDRESS", core.ParseAddress("127.0.0.1:40000"))
 	if err != nil {
 		core.Error("invalid SERVER_ADDRESS: %v", err)
@@ -101,9 +98,6 @@ func mainReturnWithCode() int {
 		core.Error("missing or invalid GATEWAY_PRIVATE_KEY: %v\n", err)
 		return 1
 	}
-
-	// todo
-	_ = gatewayPrivateKey
 
 	ctx, ctxCancelFunc := context.WithCancel(context.Background())
 
@@ -256,7 +250,19 @@ func mainReturnWithCode() int {
 				packetData = packetData[core.ChonkleBytes:packetBytes-core.PittleBytes-core.HMACBytes]
 				packetBytes = len(packetData)
 
-				if _, err := conn.WriteToUDP(packetData, serverAddress); err != nil {
+				forwardPacketData := make([]byte, MaxPacketSize)
+
+				// todo: this should be made zero copy
+
+				index := 0
+				core.WriteAddress(forwardPacketData, &index, gatewayInternalAddress)
+				core.WriteAddress(forwardPacketData, &index, from)
+				core.WriteBytes(forwardPacketData, &index, packetData, packetBytes)
+
+				forwardPacketBytes := index
+				forwardPacketData = forwardPacketData[:forwardPacketBytes]
+
+				if _, err := conn.WriteToUDP(forwardPacketData, serverAddress); err != nil {
 					core.Error("failed to forward payload to server: %v", err)
 				}
 				fmt.Printf("send %d byte payload to %s\n", packetBytes, serverAddress)

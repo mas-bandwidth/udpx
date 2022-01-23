@@ -191,7 +191,8 @@ func WriteBytes(data []byte, index *int, value []byte, numBytes int) {
 	}
 }
 
-func WriteAddress(buffer []byte, address *net.UDPAddr) {
+func WriteAddress(buffer []byte, index *int, address *net.UDPAddr) {
+	*index += AddressBytes
 	if address == nil {
 		buffer[0] = IPAddressNone
 		return
@@ -314,15 +315,18 @@ func ReadBytes(data []byte, index *int, value []byte, bytes uint32) bool {
 	return true
 }
 
-func ReadAddress(buffer []byte) *net.UDPAddr {
+func ReadAddress(buffer []byte, index *int, address *net.UDPAddr) bool {
+	*index += AddressBytes
 	addressType := buffer[0]
 	switch addressType {
 	case IPAddressIPv4:
-		return &net.UDPAddr{IP: net.IPv4(buffer[1], buffer[2], buffer[3], buffer[4]), Port: ((int)(binary.LittleEndian.Uint16(buffer[5:])))}
+		*address = net.UDPAddr{IP: net.IPv4(buffer[1], buffer[2], buffer[3], buffer[4]), Port: ((int)(binary.LittleEndian.Uint16(buffer[5:])))}
+		return true
 	case IPAddressIPv6:
-		return &net.UDPAddr{IP: buffer[1:], Port: ((int)(binary.LittleEndian.Uint16(buffer[17:])))}
+		*address = net.UDPAddr{IP: buffer[1:], Port: ((int)(binary.LittleEndian.Uint16(buffer[17:])))}
+		return true
 	}
-	return nil
+	return true
 }
 
 func RandomBytes(bytes int) []byte {
