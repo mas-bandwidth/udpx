@@ -85,25 +85,50 @@ DONE
 
 	------------------------
 
-TODO
-
-	------------------------
-
 	Extend the gateway to open sockets on the internal address.
 
-	------------------------
-
-	When a packet is received on the gateway internal address, read the client address from the first 19 bytes and forward the packet to the client.
-
-	------------------------
+	When a packet is received on the gateway internal address, read the client address from the first 19 bytes and forward the rest of the packet to the client.
 
 	Verify the client receives the dummy 100 byte payload from the server.
 
-	------------------------
+TODO
 
-	Implement a challenge response before the gateway will forward packets.
+	The client receives the 100 byte payload on the internal address.
 
-	This can be done with a small crypto token that gets refreshed periodically.
+	Change it so that the packet is forwarded from the public address sockets.
+
+	This implies that there is a one-to-one ratio of internal and public sockets on the gateway, eg. internal[i] -> public[i] socket for sending.
+
+	-----------
+
+	Verify the client gets the 100 byte payload from the gateway address 127.0.0.1:40000 not 40001 (internal).
+
+	-----------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	========================
+
+	Implement a challenge response before the gateway will forward packets to the server.
+
+	This can be done with a small crypto token that gets refreshed periodically...
 
 	------------------------
 
