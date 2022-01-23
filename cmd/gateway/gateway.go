@@ -99,7 +99,29 @@ func mainReturnWithCode() int {
 		return 1
 	}
 
+	numThreads, err := envvar.GetInt("NUM_THREADS", 1)
+	if err != nil {
+		core.Error("invalid NUM_THREADS: %v", err)
+		return 1
+	}
+
+	readBuffer, err := envvar.GetInt("READ_BUFFER", 100000)
+	if err != nil {
+		core.Error("invalid READ_BUFFER: %v", err)
+		return 1
+	}
+
+	writeBuffer, err := envvar.GetInt("WRITE_BUFFER", 100000)
+	if err != nil {
+		core.Error("invalid WRITE_BUFFER: %v", err)
+		return 1
+	}
+
+	udpPort := envvar.Get("UDP_PORT", "40000")
+
 	ctx, ctxCancelFunc := context.WithCancel(context.Background())
+
+	// --------------------------------------------------
 
 	// Start HTTP server
 	{
@@ -124,154 +146,150 @@ func mainReturnWithCode() int {
 		}()
 	}
 
-	numThreads, err := envvar.GetInt("NUM_THREADS", 1)
-	if err != nil {
-		core.Error("invalid NUM_THREADS: %v", err)
-		return 1
-	}
-
-	readBuffer, err := envvar.GetInt("READ_BUFFER", 100000)
-	if err != nil {
-		core.Error("invalid READ_BUFFER: %v", err)
-		return 1
-	}
-
-	writeBuffer, err := envvar.GetInt("WRITE_BUFFER", 100000)
-	if err != nil {
-		core.Error("invalid WRITE_BUFFER: %v", err)
-		return 1
-	}
-
-	udpPort := envvar.Get("UDP_PORT", "40000")
+	// listen for udp packets on public address
 
 	var wg sync.WaitGroup
 
 	wg.Add(numThreads)
 
-	lc := net.ListenConfig{
-		Control: func(network string, address string, c syscall.RawConn) error {
-			err := c.Control(func(fileDescriptor uintptr) {
-				err := unix.SetsockoptInt(int(fileDescriptor), unix.SOL_SOCKET, unix.SO_REUSEADDR, 1)
+	{
+		lc := net.ListenConfig{
+			Control: func(network string, address string, c syscall.RawConn) error {
+				err := c.Control(func(fileDescriptor uintptr) {
+					err := unix.SetsockoptInt(int(fileDescriptor), unix.SOL_SOCKET, unix.SO_REUSEADDR, 1)
+					if err != nil {
+						panic(fmt.Sprintf("failed to set reuse address socket option: %v", err))
+					}
+
+					err = unix.SetsockoptInt(int(fileDescriptor), unix.SOL_SOCKET, unix.SO_REUSEPORT, 1)
+					if err != nil {
+						panic(fmt.Sprintf("failed to set reuse port socket option: %v", err))
+					}
+				})
+
+				return err
+			},
+		}
+
+		for i := 0; i < numThreads; i++ {
+
+			go func(thread int) {
+
+				lp, err := lc.ListenPacket(ctx, "udp", "0.0.0.0:"+udpPort)
 				if err != nil {
-					panic(fmt.Sprintf("failed to set reuse address socket option: %v", err))
+					panic(fmt.Sprintf("could not bind socket: %v", err))
 				}
 
-				err = unix.SetsockoptInt(int(fileDescriptor), unix.SOL_SOCKET, unix.SO_REUSEPORT, 1)
-				if err != nil {
-					panic(fmt.Sprintf("failed to set reuse port socket option: %v", err))
-				}
-			})
+				conn := lp.(*net.UDPConn)
+				defer conn.Close()
 
-			return err
-		},
+				if err := conn.SetReadBuffer(readBuffer); err != nil {
+					panic(fmt.Sprintf("could not set connection read buffer size: %v", err))
+				}
+
+				if err := conn.SetWriteBuffer(writeBuffer); err != nil {
+					panic(fmt.Sprintf("could not set connection write buffer size: %v", err))
+				}
+
+				buffer := [MaxPacketSize]byte{}
+
+				for {
+
+					packetBytes, from, err := conn.ReadFromUDP(buffer[:])
+					if err != nil {
+						core.Error("failed to read udp packet: %v", err)
+						break
+					}
+
+					if packetBytes < MinPacketSize {
+						fmt.Printf("packet is too small\n")
+						continue
+					}
+
+					packetData := buffer[:packetBytes]
+
+					fmt.Printf("recv %d byte packet from %s\n", packetBytes, from)
+
+					// packet filter
+
+					var magic [8]byte
+					
+					var fromAddressData [4]byte
+					var fromAddressPort uint16
+			
+					var toAddressData [4]byte
+					var toAddressPort uint16
+			
+					core.GetAddressData(from, fromAddressData[:], &fromAddressPort)
+					core.GetAddressData(gatewayAddress, toAddressData[:], &toAddressPort)
+
+					if !core.BasicPacketFilter(packetData, packetBytes) {
+						fmt.Printf("basic packet filter failed\n")
+						continue
+					}
+
+					if !core.AdvancedPacketFilter(packetData, magic[:], fromAddressData[:], fromAddressPort, toAddressData[:], toAddressPort, packetBytes) {
+						fmt.Printf("advanced packet filter failed\n")
+						continue
+					}
+
+					// decrypt
+
+					senderPublicKey := packetData[ChonkleBytes:ChonkleBytes+SessionIdBytes]
+					sequenceData := packetData[ChonkleBytes+SessionIdBytes:ChonkleBytes+SessionIdBytes+SequenceBytes]
+					encryptedData := packetData[ChonkleBytes+SessionIdBytes+SequenceBytes:packetBytes-PittleBytes]
+
+					nonce := make([]byte, NonceBytes)
+					for i := 0; i < 8; i++ {
+						nonce[i] = sequenceData[i]
+					}
+
+					err = core.Decrypt(senderPublicKey, gatewayPrivateKey, nonce, encryptedData, len(encryptedData))
+					if err != nil {
+						fmt.Printf("decryption failed\n")
+						continue
+					}
+
+					// extract payload
+
+					payloadData := packetData[core.ChonkleBytes:packetBytes-core.PittleBytes-core.HMACBytes]
+					payloadBytes := len(payloadData)
+
+					// forward payload to server
+
+					forwardPacketData := make([]byte, MaxPacketSize)
+
+					// todo: this should be made zero copy
+
+					fmt.Printf("gateway internal address is %s\n", gatewayInternalAddress.String())
+
+					index := 0
+					core.WriteAddress(forwardPacketData, &index, gatewayInternalAddress)
+					core.WriteAddress(forwardPacketData, &index, from)
+					core.WriteBytes(forwardPacketData, &index, payloadData, payloadBytes)
+
+					forwardPacketBytes := index
+					forwardPacketData = forwardPacketData[:forwardPacketBytes]
+
+					if _, err := conn.WriteToUDP(forwardPacketData, serverAddress); err != nil {
+						core.Error("failed to forward payload to server: %v", err)
+					}
+					fmt.Printf("send %d byte payload to %s\n", payloadBytes, serverAddress)
+				}
+
+				wg.Done()
+
+			}(i)
+		}
 	}
 
-	for i := 0; i < numThreads; i++ {
+	// -----------------------------------------------------------------
 
-		go func(thread int) {
+	// todo: listen on internal address
 
-			lp, err := lc.ListenPacket(ctx, "udp", "0.0.0.0:"+udpPort)
-			if err != nil {
-				panic(fmt.Sprintf("could not bind socket: %v", err))
-			}
+	// ...
 
-			conn := lp.(*net.UDPConn)
-			defer conn.Close()
-
-			if err := conn.SetReadBuffer(readBuffer); err != nil {
-				panic(fmt.Sprintf("could not set connection read buffer size: %v", err))
-			}
-
-			if err := conn.SetWriteBuffer(writeBuffer); err != nil {
-				panic(fmt.Sprintf("could not set connection write buffer size: %v", err))
-			}
-
-			buffer := [MaxPacketSize]byte{}
-
-			for {
-
-				packetBytes, from, err := conn.ReadFromUDP(buffer[:])
-				if err != nil {
-					core.Error("failed to read udp packet: %v", err)
-					break
-				}
-
-				if packetBytes < MinPacketSize {
-					fmt.Printf("packet is too small\n")
-					continue
-				}
-
-				packetData := buffer[:packetBytes]
-
-				fmt.Printf("recv %d byte packet from %s\n", packetBytes, from)
-
-				// packet filter
-
-				var magic [8]byte
-				
-				var fromAddressData [4]byte
-				var fromAddressPort uint16
-		
-				var toAddressData [4]byte
-				var toAddressPort uint16
-		
-				core.GetAddressData(from, fromAddressData[:], &fromAddressPort)
-				core.GetAddressData(gatewayAddress, toAddressData[:], &toAddressPort)
-
-				if !core.BasicPacketFilter(packetData, packetBytes) {
-					fmt.Printf("basic packet filter failed\n")
-					continue
-				}
-
-				if !core.AdvancedPacketFilter(packetData, magic[:], fromAddressData[:], fromAddressPort, toAddressData[:], toAddressPort, packetBytes) {
-					fmt.Printf("advanced packet filter failed\n")
-					continue
-				}
-
-				// decrypt
-
-				senderPublicKey := packetData[ChonkleBytes:ChonkleBytes+SessionIdBytes]
-				sequenceData := packetData[ChonkleBytes+SessionIdBytes:ChonkleBytes+SessionIdBytes+SequenceBytes]
-				encryptedData := packetData[ChonkleBytes+SessionIdBytes+SequenceBytes:packetBytes-PittleBytes]
-
-				nonce := make([]byte, NonceBytes)
-				for i := 0; i < 8; i++ {
-					nonce[i] = sequenceData[i]
-				}
-
-				err = core.Decrypt(senderPublicKey, gatewayPrivateKey, nonce, encryptedData, len(encryptedData))
-				if err != nil {
-					fmt.Printf("decryption failed\n")
-					continue
-				}
-
-				// forward payload to server
-
-				packetData = packetData[core.ChonkleBytes:packetBytes-core.PittleBytes-core.HMACBytes]
-				packetBytes = len(packetData)
-
-				forwardPacketData := make([]byte, MaxPacketSize)
-
-				// todo: this should be made zero copy
-
-				index := 0
-				core.WriteAddress(forwardPacketData, &index, gatewayInternalAddress)
-				core.WriteAddress(forwardPacketData, &index, from)
-				core.WriteBytes(forwardPacketData, &index, packetData, packetBytes)
-
-				forwardPacketBytes := index
-				forwardPacketData = forwardPacketData[:forwardPacketBytes]
-
-				if _, err := conn.WriteToUDP(forwardPacketData, serverAddress); err != nil {
-					core.Error("failed to forward payload to server: %v", err)
-				}
-				fmt.Printf("send %d byte payload to %s\n", packetBytes, serverAddress)
-			}
-
-			wg.Done()
-
-		}(i)
-	}
+	// -----------------------------------------------------------------
 
 	fmt.Printf("started udp server on port %s\n", udpPort)
 

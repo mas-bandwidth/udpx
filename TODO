@@ -63,6 +63,28 @@ DONE
 
 	Extend server to respond to the gateway internal address, with a dummy 100 byte payload prefixed by the client address.
 
+	------------------------
+
+	Implement a challenge/response with a token that is passed back and forth.
+
+	This lets a new gateway see that this is a real authenticated session, even if it is a new instance.
+
+	What if somebody replays old packets from an existing session?
+
+	They should really have to prove with a challenge/response that they know the private key.
+
+	Without this, it's not possible to securely hand over to a new instance.
+
+	Otherwise, an attacker can take whatever token I pass back and forth, and use it to intercept a stream (within some time, even if only 10 seconds...), and insert messages into the stream.
+
+	This cannot be avoided, without a challenge response that proves the new stream knows the session id
+
+	I think this means it's not possible to securely migrate a session, without an RTT challenge/response.
+
+	I should rethink what is possible in migration. It's still possible to migrate with awareness that the old gateway is going away, but if the gateway shuts down cold or crashes, the migration will be disruptive at best (RTT multiple challenge/response).
+
+	------------------------
+
 TODO
 
 	------------------------
@@ -79,8 +101,11 @@ TODO
 
 	------------------------
 
+	Implement a challenge response before the gateway will forward packets.
 
+	This can be done with a small crypto token that gets refreshed periodically.
 
+	------------------------
 
 
 

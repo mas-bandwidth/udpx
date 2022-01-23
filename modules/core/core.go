@@ -192,27 +192,28 @@ func WriteBytes(data []byte, index *int, value []byte, numBytes int) {
 }
 
 func WriteAddress(buffer []byte, index *int, address *net.UDPAddr) {
-	*index += AddressBytes
 	if address == nil {
-		buffer[0] = IPAddressNone
+		buffer[*index] = IPAddressNone
+		*index += AddressBytes
 		return
 	}
 	ipv4 := address.IP.To4()
 	port := address.Port
 	if ipv4 != nil {
-		buffer[0] = IPAddressIPv4
-		buffer[1] = ipv4[0]
-		buffer[2] = ipv4[1]
-		buffer[3] = ipv4[2]
-		buffer[4] = ipv4[3]
-		buffer[5] = (byte)(port & 0xFF)
-		buffer[6] = (byte)(port >> 8)
+		buffer[*index] = IPAddressIPv4
+		buffer[*index+1] = ipv4[0]
+		buffer[*index+2] = ipv4[1]
+		buffer[*index+3] = ipv4[2]
+		buffer[*index+4] = ipv4[3]
+		buffer[*index+5] = (byte)(port & 0xFF)
+		buffer[*index+6] = (byte)(port >> 8)
 	} else {
-		buffer[0] = IPAddressIPv6
-		copy(buffer[1:], address.IP)
-		buffer[17] = (byte)(port & 0xFF)
-		buffer[18] = (byte)(port >> 8)
+		buffer[*index] = IPAddressIPv6
+		copy(buffer[*index+1:], address.IP)
+		buffer[*index+17] = (byte)(port & 0xFF)
+		buffer[*index+18] = (byte)(port >> 8)
 	}
+	*index += AddressBytes
 }
 
 func ReadBool(data []byte, index *int, value *bool) bool {
@@ -316,16 +317,16 @@ func ReadBytes(data []byte, index *int, value []byte, bytes uint32) bool {
 }
 
 func ReadAddress(buffer []byte, index *int, address *net.UDPAddr) bool {
-	*index += AddressBytes
-	addressType := buffer[0]
+	addressType := buffer[*index]
 	switch addressType {
 	case IPAddressIPv4:
-		*address = net.UDPAddr{IP: net.IPv4(buffer[1], buffer[2], buffer[3], buffer[4]), Port: ((int)(binary.LittleEndian.Uint16(buffer[5:])))}
-		return true
+		*address = net.UDPAddr{IP: net.IPv4(buffer[*index+1], buffer[*index+2], buffer[*index+3], buffer[*index+4]), Port: ((int)(binary.LittleEndian.Uint16(buffer[*index+5:])))}
+		break
 	case IPAddressIPv6:
-		*address = net.UDPAddr{IP: buffer[1:], Port: ((int)(binary.LittleEndian.Uint16(buffer[17:])))}
-		return true
+		*address = net.UDPAddr{IP: buffer[*index+1:], Port: ((int)(binary.LittleEndian.Uint16(buffer[*index+17:])))}
+		break
 	}
+	*index += AddressBytes
 	return true
 }
 
