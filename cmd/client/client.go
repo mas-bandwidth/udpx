@@ -44,7 +44,6 @@ import (
 	"github.com/networknext/udpx/modules/envvar"
 )
 
-const PayloadBytes = 100
 const MaxPacketSize = 1500
 
 func main() {
@@ -158,8 +157,8 @@ func mainReturnWithCode() int {
 
 			packetData := make([]byte, MaxPacketSize)
 
-			payload := make([]byte, PayloadBytes)
-			for i := 0; i < PayloadBytes; i++ {
+			payload := make([]byte, core.MinPayloadBytes)
+			for i := 0; i < core.MinPayloadBytes; i++ {
 				payload[i] = byte(i)
 			}
 			
@@ -172,7 +171,7 @@ func mainReturnWithCode() int {
 			encryptStart := index
 			core.WriteUint64(packetData, &index, ack)
 			core.WriteBytes(packetData, &index, ack_bits[:], len(ack_bits))
-			core.WriteBytes(packetData, &index, payload[:], PayloadBytes)
+			core.WriteBytes(packetData, &index, payload[:], core.MinPayloadBytes)
 			encryptFinish := index
 			index += core.HMACBytes
 			pittle := packetData[index:index+core.PittleBytes]

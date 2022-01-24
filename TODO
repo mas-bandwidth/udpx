@@ -149,25 +149,59 @@ DONE
 
 	------------------------
 
-TODO
-
-	------------------------
-
 	Add a zero byte in front of the chonkle for future proofing
 
 	------------------------
 
-	Design the challenge and response packets
+	There should be a version number in front of the server -> gateway packet, so we can upgrade the format, without bringing the system down.
+
+	------------------------
+
+	There should also be a version number in front of the gateway -> server packet.
+
+	------------------------
+
+	Should there also be a version in front of the gateway -> client packet? Not sure yet. Pass for now.
+
+	------------------------
 
 	Determine and enforce the minimum payload size (1000 bytes)
 
+	------------------------
 
+	Security concern. Client generates private/public keypair, and knowing this goes wide across a bot net. Is there anything we can do here? Probably not. Would it cause problems? Potentially yes, but is it really any different from botnet with different keypairs generated? Not really.
 
+	------------------------
 
+	Purpose of challenge and response:
 
+		1. Ensure that an actual client which knows the private key for the session is on the other end of the address, before forwarding packets from the gateway to the server.
 
+		2. To allow the client session can seamlessly transition from one gateway instance to another, in case a gateway instance goes down, or load balancing points the session at another gateway.
 
+		3. To avoid somebody being able to capture and replay packets from breaking the client session, eg. by capturing a packet and then load balancing to a different gateway, it must not be possible for the hijacker to inject old packets into the session stream.
 
+	------------------------
+
+	Since the client must sign the response with the private key, it seems that the contents of the challenge may be completely moot.
+
+	But this is not true, since there must be some hash that is verifiable statelessly as being real.
+
+	My suggestion would be to encrypt the following data in the token:
+
+		1. client address + port 
+		2. gateway address + port 
+		3. timestamp (such that old challenge tokens can be ignored if > n seconds old)
+
+	Then this token is encrypted in such a way (with a private key known only to the gateway instance...) and passed down as the challenge, encrypted with private/public keypair again.
+
+	This way even though the client must be able to decrypt the token outer, it cannot decrypt the token inner and spoof it.
+
+	So the challenge/response is secure.
+
+	------------------------
+
+TODO
 
 
 

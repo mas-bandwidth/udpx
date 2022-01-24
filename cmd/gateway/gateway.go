@@ -53,7 +53,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-const PayloadBytes = 100
+const MaxPacketSize = 1500
 
 func main() {
 	os.Exit(mainReturnWithCode())
@@ -193,7 +193,7 @@ func mainReturnWithCode() int {
 
 				defer conn.Close()
 
-				buffer := [core.MaxPacketSize]byte{}
+				buffer := [MaxPacketSize]byte{}
 
 				for {
 
@@ -211,6 +211,13 @@ func mainReturnWithCode() int {
 					packetData := buffer[:packetBytes]
 
 					fmt.Printf("recv %d byte packet from %s\n", packetBytes, from)
+
+					// drop unknown packet versions
+
+					if packetData[0] != 0 {
+						fmt.Printf("unknown packet version\n")
+						continue
+					}
 
 					// packet filter
 
@@ -263,9 +270,9 @@ func mainReturnWithCode() int {
 
 					// forward payload to server
 
-					forwardPacketData := make([]byte, core.MaxPacketSize)
+					forwardPacketData := make([]byte, MaxPacketSize)
 
-					// todo: this should be made zero copy
+					// todo: this should be zero copy
 
 					fmt.Printf("gateway internal address is %s\n", gatewayInternalAddress.String())
 
@@ -280,7 +287,7 @@ func mainReturnWithCode() int {
 					if _, err := conn.WriteToUDP(forwardPacketData, serverAddress); err != nil {
 						core.Error("failed to forward payload to server: %v", err)
 					}
-					fmt.Printf("send %d byte payload to %s\n", payloadBytes, serverAddress.String())
+					fmt.Printf("send %d byte packet to %s\n", payloadBytes, serverAddress.String())
 				}
 
 				wg.Done()
@@ -291,7 +298,7 @@ func mainReturnWithCode() int {
 
 	// -----------------------------------------------------------------
 
-	// todo: listen on internal address
+	// listen on internal address
 
 	wg.Add(numThreads)
 
@@ -334,7 +341,7 @@ func mainReturnWithCode() int {
 					panic(fmt.Sprintf("could not set internal connection write buffer size: %v", err))
 				}
 
-				buffer := [core.MaxPacketSize]byte{}
+				buffer := [MaxPacketSize]byte{}
 
 				for {
 
@@ -348,12 +355,17 @@ func mainReturnWithCode() int {
 
 					fmt.Printf("recv internal %d byte packet from %s\n", packetBytes, from.String())
 
-					if packetBytes <= 19 {
+					if packetBytes <= core.VersionBytes + core.AddressBytes {
 						fmt.Printf("internal packet is too small\n")
 						continue
 					}
 
-					index := 0
+					if packetData[0] != 0 {
+						fmt.Printf("unknown internal packet version\n")
+						continue
+					}
+
+					index := core.VersionBytes
 
 					var clientAddress net.UDPAddr
 

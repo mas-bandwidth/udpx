@@ -188,9 +188,9 @@ func mainReturnWithCode() int {
 
 				responsePacketData := make([]byte, MaxPacketSize)
 
-				index = 0
+				dummyPayload := make([]byte, core.MinPayloadBytes)
 
-				dummyPayload := make([]byte, 100)
+				index = core.VersionBytes
 
 				core.WriteAddress(responsePacketData,&index, &clientAddress)
 				core.WriteBytes(responsePacketData, &index, dummyPayload, len(dummyPayload))

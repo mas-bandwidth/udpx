@@ -60,8 +60,8 @@ const AckBytes = 8
 const AckBitsBytes = 32
 const PittleBytes = 2
 const AddressBytes = 19
-const MinPacketSize = VersionBytes + ChonkleBytes + SessionIdBytes + SequenceBytes + AckBytes + AckBitsBytes + HMACBytes + PittleBytes
-const MaxPacketSize = 1500
+const MinPayloadBytes = 1000
+const MinPacketSize = VersionBytes + ChonkleBytes + SessionIdBytes + SequenceBytes + AckBytes + AckBitsBytes + MinPayloadBytes + HMACBytes + PittleBytes
 
 func Keygen() ([]byte, []byte) {
 	var publicKey [PublicKeyBytes]byte
