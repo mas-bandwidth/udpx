@@ -2,7 +2,9 @@ DONE
 
 TODO
 
-	Add packet type:
+	-------------
+
+	Add packet types:
 
 		0: payload
 		1: challenge
@@ -27,4 +29,3 @@ TODO
 	Actually hook up challenge/response protocol gating additions to the session map on the gateway.
 
 	-------------
-	

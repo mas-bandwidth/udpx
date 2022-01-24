@@ -63,6 +63,10 @@ const AddressBytes = 19
 const MinPayloadBytes = 1000
 const MinPacketSize = VersionBytes + ChonkleBytes + SessionIdBytes + SequenceBytes + AckBytes + AckBitsBytes + MinPayloadBytes + HMACBytes + PittleBytes
 
+const PayloadPacket = byte(0)
+const ChallengePacket = byte(1)
+const ChallengeResponsePacket = byte(2)
+
 func Keygen() ([]byte, []byte) {
 	var publicKey [PublicKeyBytes]byte
 	var privateKey [PrivateKeyBytes]byte

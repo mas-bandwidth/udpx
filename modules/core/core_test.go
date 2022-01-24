@@ -80,7 +80,7 @@ func TestChonkle(t *testing.T) {
     	fromPort := uint16(i+1000000)
     	toPort := uint16(i+5000)
     	packetLength := 18 + ( i % ( len(output) - 18 ) )
-    	GenerateChonkle(output[:], magic[:], fromAddress[:], fromPort, toAddress[:], toPort, packetLength)
+    	GenerateChonkle(output[1:], magic[:], fromAddress[:], fromPort, toAddress[:], toPort, packetLength)
     	assert.Equal(t, true, BasicPacketFilter(output[:], packetLength))
 	}
 }
@@ -127,7 +127,7 @@ func TestPittleAndChonkle(t *testing.T) {
     	fromPort := uint16(i+1000000)
     	toPort := uint16(i+5000)
     	packetLength := 18 + ( i % ( len(output) - 18 ) )
-    	GenerateChonkle(output[:], magic[:], fromAddress[:], fromPort, toAddress[:], toPort, packetLength)
+    	GenerateChonkle(output[1:], magic[:], fromAddress[:], fromPort, toAddress[:], toPort, packetLength)
     	GeneratePittle(output[packetLength-2:], fromAddress[:], fromPort, toAddress[:], toPort, packetLength)
     	assert.Equal(t, true, BasicPacketFilter(output[:], packetLength))
     	assert.Equal(t, true, AdvancedPacketFilter(output[:], magic[:], fromAddress[:], fromPort, toAddress[:], toPort, packetLength))
