@@ -52,12 +52,16 @@ const PrivateKeyBytes = 32
 const NonceBytes = 24
 const HMACBytes = 16
 const MagicBytes = 8
+const VersionBytes = 1
 const ChonkleBytes = 15
-const PittleBytes = 2
-const SequenceBytes = 8
 const SessionIdBytes = 32
+const SequenceBytes = 8
+const AckBytes = 8
 const AckBitsBytes = 32
+const PittleBytes = 2
 const AddressBytes = 19
+const MinPacketSize = VersionBytes + ChonkleBytes + SessionIdBytes + SequenceBytes + AckBytes + AckBitsBytes + HMACBytes + PittleBytes
+const MaxPacketSize = 1500
 
 func Keygen() ([]byte, []byte) {
 	var publicKey [PublicKeyBytes]byte
@@ -432,7 +436,9 @@ func GenerateChonkle(output []byte, magic []byte, fromAddressData []byte, fromPo
     output[14] = ( ( data[7] & 0xFE ) >> 1 ) + 17
 }
 
-func BasicPacketFilter(data []byte, packetLength int) bool {
+func BasicPacketFilter(packetData []byte, packetLength int) bool {
+
+	data := packetData[1:len(packetData)]
 
     if data[0] < 0x2A || data[0] > 0x2D {
         return false
@@ -498,7 +504,7 @@ func AdvancedPacketFilter(data []byte, magic []byte, fromAddress []byte, fromPor
     var b [2]byte
     GenerateChonkle(a[:], magic, fromAddress, fromPort, toAddress, toPort, packetLength)
     GeneratePittle(b[:], fromAddress, fromPort, toAddress, toPort, packetLength)
-    if bytes.Compare(a[0:15], data[0:15]) != 0 {
+    if bytes.Compare(a[0:15], data[1:16]) != 0 {
         return false
     }
     if bytes.Compare(b[0:2], data[packetLength-2:packetLength]) != 0 {

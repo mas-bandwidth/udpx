@@ -163,8 +163,8 @@ func mainReturnWithCode() int {
 				payload[i] = byte(i)
 			}
 			
-			index := 0
-			chonkle := packetData[:core.ChonkleBytes]
+			index := core.VersionBytes
+			chonkle := packetData[index:index+core.ChonkleBytes]
 			index += core.ChonkleBytes
 			core.WriteBytes(packetData, &index, sessionId, core.SessionIdBytes)
 			sequenceData := packetData[index:index+core.SequenceBytes]
@@ -236,8 +236,6 @@ func mainReturnWithCode() int {
 	fmt.Println("\nshutting down")
 
 	ctxCancelFunc()
-
-	// todo: wait for stuff
 
 	fmt.Println("shutdown completed")
 

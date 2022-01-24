@@ -99,15 +99,13 @@ DONE
 
 	Verify the client gets the 100 byte payload from the gateway address 127.0.0.1:40000 not 40001 (internal).
 
-TODO
-
 	------------------------
 	
 	Implement a challenge response before the gateway is allowed to forward packets to the server.
 
 	This can be done with a small crypto token that gets refreshed periodically...
 
-	If the token is absent, then a challenge/response can be performed. 
+	If the token is absent, then a challenge/response can be performed.
 
 	If the token is invalid or stale, then the packet can be dropped.
 
@@ -118,6 +116,52 @@ TODO
 	This seems to have a lot of parallels to HTTP attacks...
 
 	------------------------
+
+	Make sure the challenge packet is smaller than the minimal packet that could trigger a challenge to be sent out. (no DDoS amplification).
+
+	------------------------
+
+	Server receives valid packet from session id
+
+	Look up a session entry by session id
+
+	If the entry exists, grab the data and do the reliability stuff.
+
+	If the entry doesn't exist, send a challenge packet back to the client. This challenge packet must be smaller than minimum packet packet from client -> gateway.
+
+	In the challenge packet, include some encrypted token data (including timestamp and perhaps some number to be incremented?) and sign it with a random "challenge" keypair on the server (held fixed at the beginning of the server start), and the public key of the session. Include the internal public key in the challenge packet (since otherwise the client won't know it).
+
+	Client receives the challenge packet, and can only decrypt it with its private key.
+
+	Client decrypts the challenge token, makes some trivial modification, eg. adds one to a number, and encodes it back with the private key of the session, and the public key of the "challenge" keypair for the server.
+
+	The server receives the response packet, checks that it decrypts -- now it knows that the sender knows the private key (does it need to include some data for safety to be checked? timestamp? initial sequence number?)
+
+	Now the server adds a session entry indexed by session id.
+
+	Next time a packet comes through, the server won't respond with a challenge packet, it will actually process packets.
+
+	In order for this to work, we may need to set some minimum payload size on packets, eg. 1000 bytes
+
+	To try to get a 10X reduction in response size to challenges.
+
+	If this isn't enough, then a connecting client needs some sort of token from the backend, to allow it in, and this token can get periodically refreshed while the client is connected. But this can be designed later...
+
+	------------------------
+
+TODO
+
+	------------------------
+
+	Add a zero byte in front of the chonkle for future proofing
+
+	------------------------
+
+	Design the challenge and response packets
+
+	Determine and enforce the minimum payload size (1000 bytes)
+
+
 
 
 

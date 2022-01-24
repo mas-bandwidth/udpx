@@ -53,17 +53,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-const ChonkleBytes = 15
-const PittleBytes = 2
-const SequenceBytes = 8
-const AckBytes = 8
-const AckBitsBytes = 32
-const SessionIdBytes = 32
-const NonceBytes = 24
-const HMACBytes = 16
 const PayloadBytes = 100
-const MinPacketSize = ChonkleBytes + SessionIdBytes + SequenceBytes + AckBytes + AckBitsBytes + HMACBytes + PittleBytes
-const MaxPacketSize = 1500
 
 func main() {
 	os.Exit(mainReturnWithCode())
@@ -203,7 +193,7 @@ func mainReturnWithCode() int {
 
 				defer conn.Close()
 
-				buffer := [MaxPacketSize]byte{}
+				buffer := [core.MaxPacketSize]byte{}
 
 				for {
 
@@ -213,7 +203,7 @@ func mainReturnWithCode() int {
 						break
 					}
 
-					if packetBytes < MinPacketSize {
+					if packetBytes < core.MinPacketSize {
 						fmt.Printf("packet is too small\n")
 						continue
 					}
@@ -247,12 +237,16 @@ func mainReturnWithCode() int {
 
 					// decrypt
 
-					senderPublicKey := packetData[ChonkleBytes:ChonkleBytes+SessionIdBytes]
-					sequenceData := packetData[ChonkleBytes+SessionIdBytes:ChonkleBytes+SessionIdBytes+SequenceBytes]
-					encryptedData := packetData[ChonkleBytes+SessionIdBytes+SequenceBytes:packetBytes-PittleBytes]
+					publicKeyIndex := core.VersionBytes + core.ChonkleBytes
+					sequenceIndex := core.VersionBytes + core.ChonkleBytes + core.SessionIdBytes
+					encryptedDataIndex := core.VersionBytes + core.ChonkleBytes + core.SessionIdBytes + core.SequenceBytes
 
-					nonce := make([]byte, NonceBytes)
-					for i := 0; i < 8; i++ {
+					senderPublicKey := packetData[publicKeyIndex:publicKeyIndex+core.SessionIdBytes]
+					sequenceData := packetData[sequenceIndex:sequenceIndex+core.SequenceBytes]
+					encryptedData := packetData[encryptedDataIndex:packetBytes-core.PittleBytes]
+
+					nonce := make([]byte, core.NonceBytes)
+					for i := 0; i < core.SequenceBytes; i++ {
 						nonce[i] = sequenceData[i]
 					}
 
@@ -264,12 +258,12 @@ func mainReturnWithCode() int {
 
 					// extract payload
 
-					payloadData := packetData[core.ChonkleBytes:packetBytes-core.PittleBytes-core.HMACBytes]
+					payloadData := packetData[core.VersionBytes+core.ChonkleBytes:packetBytes-core.PittleBytes-core.HMACBytes]
 					payloadBytes := len(payloadData)
 
 					// forward payload to server
 
-					forwardPacketData := make([]byte, MaxPacketSize)
+					forwardPacketData := make([]byte, core.MaxPacketSize)
 
 					// todo: this should be made zero copy
 
@@ -340,7 +334,7 @@ func mainReturnWithCode() int {
 					panic(fmt.Sprintf("could not set internal connection write buffer size: %v", err))
 				}
 
-				buffer := [MaxPacketSize]byte{}
+				buffer := [core.MaxPacketSize]byte{}
 
 				for {
 
