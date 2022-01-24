@@ -203,9 +203,75 @@ DONE
 
 TODO
 
+	-------------
+
+	We also need a packet type byte
+
+	This packet type byte should be for the internal protocol only
+
+	so far:
+
+		0: payload packet (regular packet, delivering events...)
+		1: challenge packet
+		2: challenge response packet
+
+	Any packet received that is unknown on the gateway (no corresponding session entry), gets a response with a challenge packet.
+
+	The challenge packet must be small relative to any regular packet that can trigger it, to avoid DDoS amplification.
+
+	-------------
+
+	Implement challenge token
+
+	Add challenge token to core.go with tests
+
+	Model it on the encryption used for connect token, but obviously totally different contents in the token.
+
+	-------------
+
+	Add a session map to each gateway shard via SO_REUSEPORT (no contention = no locks)
+
+	Process one packet at a time, so no contention or ordering issues wrt. packet processing.
+
+	If there is no entry in the session map, respond with a challenge packet.
+
+	If there is an entry in the session map, update the timeout... and pass the packet through to the server.
+
+	-------------
+
+	What if we just had the gateway flip every minute or so, to a new "instance" of teh session database via pointer swap, per-shard.
+
+	Then sessions could migrate to the new session entry (driven by packet send/recv) every minute, and we wouldn't ever need to walk the structure.
+
+	We'd need a way to do this migration, without any RTT disruption...
+
+	This could be done by overlapping old and new maps for the transition period.
+
+	First check if in new, then check if in old, but always insert and update in new, when found.
+
+	This is an AWESOME way to do timeouts without O(n) walk.
+
+	-------------
 
 
-===============================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 	------------------------
 
