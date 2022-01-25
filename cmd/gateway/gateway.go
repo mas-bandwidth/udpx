@@ -317,7 +317,6 @@ func mainReturnWithCode() int {
 							}
 
 							if sessionEntry == nil {
-								// todo: so temporary...
 								challengePacketData := make([]byte, 1)
 								challengePacketData[0] = core.ChallengePacket
 								if _, err := conn.WriteToUDP(challengePacketData, from); err != nil {

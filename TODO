@@ -50,10 +50,6 @@ DONE
 
 	-------------
 	
-TODO
-
-	-------------
-
 	Setup the channel for the main thread to process received packets from the goroutine.
 
 	-------------
@@ -62,15 +58,21 @@ TODO
 
 	-------------
 
+TODO
+
+	-------------
+
 	Implement challenge token and add unit tests for it
 
-	Challenge token should have:
+	Challenge token should be encrypted (not readable by client) and have:
 
-		session id
-		sequence
 		timestamp 
 		client address + port
 		gateway address + port
+
+	-------------
+
+	The challenge packet should include the sequence that the challenge token was generated at, so the client can decide if the challenge packet is newer and update it.
 
 	-------------
 

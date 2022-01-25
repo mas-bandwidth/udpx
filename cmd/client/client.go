@@ -172,7 +172,21 @@ func mainReturnWithCode() int {
 			for !quit {
 				select {
 	    			case packetData := <-receivedPackets:
-				        fmt.Printf("received %d byte packet from gateway\n", len(packetData))
+
+				        packetType := packetData[0]
+
+				        switch packetType {
+
+				        case core.PayloadPacket:
+				        	fmt.Printf("received %d byte payload packet from gateway\n", len(packetData))
+				        	// todo: process payload packet
+				        	// todo: if the payload packet sequence is greater than the challenge token sequence, clear the challenge token
+
+				        case core.ChallengePacket:
+				        	fmt.Printf("received %d byte challenge packet from gateway\n", len(packetData))
+				        	// todo: store the challenge token somewhere, so it gets picked up next payload packet. if we already have a challenge token, store this one if its sequence is higher
+				        }
+
 				    default:
 				        quit = true
 				}

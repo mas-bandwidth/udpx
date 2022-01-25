@@ -2,69 +2,31 @@ IDEAS
 
 	-------------
 
-	We also need a packet type byte
+	The job of the gateway is to:
 
-	This packet type byte should be for the internal protocol only
+		a) scrub packets that don't belong to our protocol
 
-	so far:
+		b) scrub old packets that can't possibly be valid (eg. packets older than n sequence from current)
 
-		0: payload packet (regular packet, delivering events...)
-		1: challenge packet
-		2: challenge response packet
+		c) verify signature and decrypt packets before passing on to the server
 
-	Any packet received that is unknown on the gateway (no corresponding session entry), gets a response with a challenge packet.
+		d) maintain challenge/response protocols with the client
 
-	The challenge packet must be small relative to any regular packet that can trigger it, to avoid DDoS amplification.
+		e) handle migrations of clients from one IP:port to another
 
-	-------------
-
-	Implement challenge token
-
-	Add challenge token to core.go with tests
-
-	Model it on the encryption used for connect token, but obviously totally different contents in the token.
-
-	-------------
-
-	Add a session map to each gateway shard via SO_REUSEPORT (no contention = no locks)
-
-	Process one packet at a time, so no contention or ordering issues wrt. packet processing.
-
-	If there is no entry in the session map, respond with a challenge packet.
-
-	If there is an entry in the session map, update the timeout... and pass the packet through to the server.
-
-	-------------
-
-	What if we just had the gateway flip every minute or so, to a new "instance" of teh session database via pointer swap, per-shard.
-
-	Then sessions could migrate to the new session entry (driven by packet send/recv) every minute, and we wouldn't ever need to walk the structure.
-
-	We'd need a way to do this migration, without any RTT disruption...
-
-	This could be done by overlapping old and new maps for the transition period.
-
-	First check if in new, then check if in old, but always insert and update in new, when found.
-
-	This is an AWESOME way to do timeouts without O(n) walk.
+		f) handle migrations of clients from one gateway instance to another (via hashing or whatever)
 
 	-------------
 
 	The job of the server is to:
 
-	a) only respond to clients who have a real connection (eg. challenge/response...)
+		a) maintain reliability via ack/ack_bits
 
-	b) "instantly" transition a client from one IP:port to another without any delays or hitches in packet delivery.
+		b) enable migration of a client from one server instance to another
 
-	c) "instantly" transition from one server instance to another, in the case of a server instance failing, going down, becoming unhealthy or crashing out, without any delays or hitches in packet delivery.
+		c) queue up messages delivered from the client to some internal message processing system
 
-	d) be stateless as much as possible, so server instances can be scaled out horizontally.
-
-	e) only accept messages that conform to the schema of the server (eg. the set of messages that the client may send to the server...)
-
-	f) queue up messages to an internal message processing system, on some fully reliable packet delivery system (be it TCP, HTTPS batched, zeromq, whatever...), and only ack packets sent from the client when they have been guaranteed delivered via the queue system.
-
-	g) send down packets to the client including acks and ack_bits, so the client knows what packets have been received by the server, and what packets were dropped.
+		d) dequeue messages sent to the client and include them in payload packets sent down to the client at some regular send rate.
 
 	-------------
 	

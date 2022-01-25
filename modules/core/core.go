@@ -66,7 +66,6 @@ const MinPacketSize = VersionBytes + ChonkleBytes + SessionIdBytes + SequenceByt
 
 const PayloadPacket = byte(0)
 const ChallengePacket = byte(1)
-const ChallengeResponsePacket = byte(2)
 
 func Keygen() ([]byte, []byte) {
 	var publicKey [PublicKeyBytes]byte
