@@ -1,63 +1,5 @@
 DONE
 
-	Add packet types:
-
-		0: payload
-		1: challenge
-		2. challenge response
-
-	Add packet type to client -> gateway packet
-
-	Handle the payload packet type by forwarding to server (todo, check for establish session w. gateway first...)
-
-	Add session map with double buffered idea for automatic timeouts
-
-	Initially, insert into session map without challenge/response, just to make sure that the idea works
-
-	Server sends challenge packet to client, if no session entry for payload packet.
-
-	Prefix the hack payload packet down from server to have first byte "core.PayloadPacket" (0)
-
-	Check for this on the client, and handle the packet type in the recv, either payload, or challenge...
-
-	Sketch out the flow with challenge and response packets
-
-	Client should ignore packets that don't come from the gateway address.
-
-	Hack up something suuuuuuper dirty just to get the challenge/response flow going...
-
-	Gateway seems to not be correctly picking up the different packet types. What's up?
-
-	Fixed it, bad index.
-
-	-------------
-
-	OK. Next step is definitely to include the challenge response in the regular payload packet.
-
-	Since I have intentionally limited only large packets, firing out specific small packets from client -> gateway is not an option.
-
-	thus, it must be included in the client to server packet.
-
-	Suggest, a byte, is it included, and if so, include the challenge response.
-
-	Implies the client should timeout or remomve the challenge response data, once it connects with the server (and then it will be tripped on again, as needed, when it receives a challenge packet).
-
-	-------------
-
-	In order to do the above, definitely need to do this on main thread.
-
-	So we need the recv packet -> channel pipeline going.
-
-	-------------
-	
-	Setup the channel for the main thread to process received packets from the goroutine.
-
-	-------------
-
-	Handle payload and challenge packets appropriately when dequeing them from the goroutine.
-
-	-------------
-
 TODO
 
 	-------------
@@ -66,6 +8,7 @@ TODO
 
 	Challenge token should be encrypted (not readable by client) and have:
 
+		sequence
 		timestamp 
 		client address + port
 		gateway address + port
