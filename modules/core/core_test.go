@@ -37,6 +37,7 @@ import (
 	"math/rand"
 	"os"
 	"testing"
+	"time"
 )
 
 func FuckOffGolang() {
@@ -50,6 +51,9 @@ func randomBytes(buffer []byte) {
 }
 
 func TestPittle(t *testing.T) {
+
+	t.Parallel()
+
 	rand.Seed(42)
 	var output [256]byte
 	for i := 0; i < 10000; i++ {
@@ -67,6 +71,9 @@ func TestPittle(t *testing.T) {
 }
 
 func TestChonkle(t *testing.T) {
+
+	t.Parallel()
+
 	rand.Seed(42)
 	var output [1500]byte
 	output[0] = 1
@@ -86,6 +93,8 @@ func TestChonkle(t *testing.T) {
 }
 
 func TestABI(t *testing.T) {
+
+	t.Parallel()
 
 	var output [1024]byte
 
@@ -114,6 +123,9 @@ func TestABI(t *testing.T) {
 }
 
 func TestPittleAndChonkle(t *testing.T) {
+
+	t.Parallel()
+
 	rand.Seed(42)
 	var output [1500]byte
 	output[0] = 1
@@ -135,6 +147,9 @@ func TestPittleAndChonkle(t *testing.T) {
 }
 
 func TestBasicPacketFilter(t *testing.T) {
+
+	t.Parallel()
+
 	rand.Seed(42)
 	var output [256]byte
 	iterations := 10000
@@ -146,6 +161,9 @@ func TestBasicPacketFilter(t *testing.T) {
 }
 
 func TestAdvancedBasicPacketFilter(t *testing.T) {
+
+	t.Parallel()
+
 	rand.Seed(42)
 	var output [1500]byte
 	iterations := 10000
@@ -166,6 +184,8 @@ func TestAdvancedBasicPacketFilter(t *testing.T) {
 }
 
 func TestEncryptBox(t *testing.T) {
+
+	t.Parallel()
 
 	senderPublicKey, senderPrivateKey := Keygen_Box()
 	receiverPublicKey, receiverPrivateKey := Keygen_Box()
@@ -215,6 +235,8 @@ func TestEncryptBox(t *testing.T) {
 
 func TestEncryptSecretBox(t *testing.T) {
 
+	t.Parallel()
+
 	privateKey := Keygen_SecretBox()
 
 	assert.Equal(t, PrivateKeyBytes_SecretBox, len(privateKey))
@@ -255,4 +277,78 @@ func TestEncryptSecretBox(t *testing.T) {
 	err = Decrypt_SecretBox(privateKey[:], nonce, encryptedData, encryptedBytes)
 
 	assert.Error(t, err)
+}
+
+func TestChallengeToken(t *testing.T) {
+
+	t.Parallel()
+
+	privateKey := Keygen_SecretBox()
+
+	assert.Equal(t, PrivateKeyBytes_SecretBox, len(privateKey))
+
+	challengeToken := ChallengeToken{}
+	challengeToken.ExpireTimestamp = uint64(time.Now().Unix() + 10)
+	challengeToken.ClientAddress = *ParseAddress("127.0.0.1:30000")
+	challengeToken.GatewayAddress = *ParseAddress("127.0.0.1:40000")
+	challengeToken.Sequence = 10000
+
+	// write the token to a buffer and read it back in
+
+	buffer := make([]byte, EncryptedChallengeTokenBytes)
+
+	index := 0
+
+	WriteChallengeToken(buffer, &index, &challengeToken)
+
+	var readChallengeToken ChallengeToken
+
+	index = 0
+
+	result := ReadChallengeToken(buffer, &index, &readChallengeToken)
+
+	assert.True(t, result)
+
+	assert.Equal(t, readChallengeToken.ExpireTimestamp, challengeToken.ExpireTimestamp)
+	assert.True(t, AddressEqual(&readChallengeToken.ClientAddress, &challengeToken.ClientAddress))
+	assert.True(t, AddressEqual(&readChallengeToken.GatewayAddress, &challengeToken.GatewayAddress))
+	assert.Equal(t, readChallengeToken.Sequence, challengeToken.Sequence)
+
+	/*
+
+	var readRouteToken RouteToken
+	err := ReadRouteToken(&readRouteToken, buffer)
+
+	assert.NoError(t, err)
+	assert.Equal(t, routeToken, readRouteToken)
+
+	// can't read a token if the buffer is too small
+
+	err = ReadRouteToken(&readRouteToken, buffer[:10])
+
+	assert.Error(t, err)
+
+	// write an encrypted route token and read it back
+
+	WriteEncryptedRouteToken(&routeToken, buffer, masterPrivateKey[:], relayPublicKey[:])
+
+	err = ReadEncryptedRouteToken(&readRouteToken, buffer, masterPublicKey[:], relayPrivateKey[:])
+
+	assert.NoError(t, err)
+	assert.Equal(t, routeToken, readRouteToken)
+
+	// can't read an encrypted route token if the buffer is too small
+
+	err = ReadEncryptedRouteToken(&readRouteToken, buffer[:10], masterPublicKey[:], relayPrivateKey[:])
+
+	assert.Error(t, err)
+
+	// can't read an encrypted route token if the buffer is garbage
+
+	buffer = make([]byte, NEXT_ENCRYPTED_ROUTE_TOKEN_BYTES)
+
+	err = ReadEncryptedRouteToken(&readRouteToken, buffer, masterPublicKey[:], relayPrivateKey[:])
+
+	assert.Error(t, err)
+	*/
 }

@@ -8,15 +8,15 @@ DONE
 
 	Implement write encrypted challenge token
 
+	Implement test for read/write challenge token
+
 TODO
 
 	-------------
 
-	Implement test for read/write challenge token
+	Implement read encrypted challenge token
 
 	-------------
-
-	Implement read encrypted challenge token
 
 	Implement tests for read/write encrypted challenge token
 
