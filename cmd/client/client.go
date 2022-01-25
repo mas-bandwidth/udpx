@@ -96,6 +96,8 @@ func mainReturnWithCode() int {
 
 	lc := net.ListenConfig{}
 
+	receivedPackets := make(chan []byte)
+
 	go func() {
 
 		lp, err := lc.ListenPacket(ctx, "udp", "0.0.0.0:"+udpPort)
@@ -118,19 +120,14 @@ func mainReturnWithCode() int {
 
 			// receive packets
 
-			buffer := [MaxPacketSize]byte{}
-
 			for {
 
-				packetBytes, from, err := conn.ReadFromUDP(buffer[:])
+				packetData := make([]byte, MaxPacketSize)
+
+				packetBytes, from, err := conn.ReadFromUDP(packetData)
 				if err != nil {
 					core.Error("failed to read udp packet: %v", err)
 					break
-				}
-
-				if packetBytes <= 0 {
-					fmt.Printf("packet is too small\n")
-					continue
 				}
 
 				if !core.AddressEqual(from, gatewayAddress) {
@@ -138,97 +135,19 @@ func mainReturnWithCode() int {
 					continue
 				}
 
-				packetData := buffer[:packetBytes]
-
-				switch packetData[0] {
-
-					case core.PayloadPacket:
-						fmt.Printf("recv %d byte payload packet from %s\n", packetBytes, from)
-						break
-
-					case core.ChallengePacket:
-
-						fmt.Printf("recv %d byte challenge packet from %s\n", packetBytes, from)
-
-						// todo: hack hack hack -- send back a challenge response packet, so temporary...
-
-						challengeResponsePacketData := make([]byte, MaxPacketSize)
-
-						payload := make([]byte, core.MinPayloadBytes)
-						for i := 0; i < core.MinPayloadBytes; i++ {
-							payload[i] = byte(i)
-						}
-
-						version := byte(0)
-						
-						index := 0
-
-						// todo: haxxx
-						sequence := uint64(0)
-						ack := uint64(0)
-						ack_bits := [core.AckBitsBytes]byte{}
-						
-						core.WriteUint8(challengeResponsePacketData, &index, version)
-						chonkle := challengeResponsePacketData[index:index+core.ChonkleBytes]
-						index += core.ChonkleBytes
-						core.WriteBytes(challengeResponsePacketData, &index, sessionId, core.SessionIdBytes)
-						sequenceData := challengeResponsePacketData[index:index+core.SequenceBytes]
-						core.WriteUint64(challengeResponsePacketData, &index, sequence)
-						encryptStart := index
-						core.WriteUint64(challengeResponsePacketData, &index, ack)
-						core.WriteBytes(challengeResponsePacketData, &index, ack_bits[:], len(ack_bits))
-						core.WriteUint8(challengeResponsePacketData, &index, core.ChallengeResponsePacket)
-						// todo: would be considerably better to embed the challenge response in payload packets...
-						core.WriteBytes(challengeResponsePacketData, &index, payload[:], core.MinPayloadBytes)
-						encryptFinish := index
-						index += core.HMACBytes
-						pittle := challengeResponsePacketData[index:index+core.PittleBytes]
-						index += core.PittleBytes
-
-						nonce := make([]byte, core.NonceBytes)
-						for i := 0; i < core.SequenceBytes; i++ {
-							nonce[i] = sequenceData[i]
-						}
-
-						core.Encrypt(clientPrivateKey, gatewayPublicKey, nonce, challengeResponsePacketData[encryptStart:encryptFinish], encryptFinish - encryptStart)
-						
-						challengeResponsePacketBytes := index
-						challengeResponsePacketData = challengeResponsePacketData[:challengeResponsePacketBytes]
-
-						var magic [core.MagicBytes]byte
-						
-						var fromAddressData [4]byte
-						var fromAddressPort uint16
-				
-						var toAddressData [4]byte
-						var toAddressPort uint16
-				
-						core.GetAddressData(clientAddress, fromAddressData[:], &fromAddressPort)
-						core.GetAddressData(gatewayAddress, toAddressData[:], &toAddressPort)
-
-						core.GenerateChonkle(chonkle[:], magic[:], fromAddressData[:], fromAddressPort, toAddressData[:], toAddressPort, challengeResponsePacketBytes)
-
-						core.GeneratePittle(pittle[:], fromAddressData[:], fromAddressPort, toAddressData[:], toAddressPort, challengeResponsePacketBytes)
-
-						if !core.BasicPacketFilter(challengeResponsePacketData, challengeResponsePacketBytes) {
-							panic("basic packet filter failed")
-						}
-
-						if !core.AdvancedPacketFilter(challengeResponsePacketData, magic[:], fromAddressData[:], fromAddressPort, toAddressData[:], toAddressPort, challengeResponsePacketBytes) {
-							panic("advanced packet filter failed")
-						}
-
-						if _, err := conn.WriteToUDP(challengeResponsePacketData, gatewayAddress); err != nil {
-							core.Error("failed to write udp packet: %v", err)
-						}
-
-						fmt.Printf("*** sent challenge response ***\n")
-
-						break
+				if packetBytes < 1 {
+					fmt.Printf("packet is too small\n")
+					continue
 				}
 
-				// todo: queue packet up on channel for main loop to receive
-				_ = packetData
+				if packetData[0] != core.PayloadPacket && packetData[0] != core.ChallengePacket {
+					fmt.Printf("unknown packet type %d\n", packetData[0])
+					continue
+				}
+
+				packetData = packetData[:packetBytes]
+
+				receivedPackets <- packetData
 			}
 
 		}()
@@ -246,6 +165,20 @@ func mainReturnWithCode() int {
 		ack_bits := [32]byte{}
 
 		for {
+
+			// receive packets
+
+			quit := false
+			for !quit {
+				select {
+	    			case packetData := <-receivedPackets:
+				        fmt.Printf("received %d byte packet from gateway\n", len(packetData))
+				    default:
+				        quit = true
+				}
+			}
+
+			// send payload packet
 
 			packetData := make([]byte, MaxPacketSize)
 
