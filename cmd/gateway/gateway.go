@@ -288,21 +288,19 @@ func mainReturnWithCode() int {
 
 					// decrypt payload
 
-					payloadIndex := core.VersionBytes+core.ChonkleBytes
+					payloadIndex := core.VersionBytes + core.ChonkleBytes
 					payloadData := packetData[payloadIndex:packetBytes-core.PittleBytes-core.HMACBytes]
 					payloadBytes := len(payloadData)
 
 					// what sort of packet is this?
 
-					packetType := payloadData[core.SequenceBytes+core.AckBytes+core.AckBitsBytes]
+					packetType := payloadData[core.SessionIdBytes+core.SequenceBytes+core.AckBytes+core.AckBitsBytes]
 
 					switch packetType {
 
 						case core.PayloadPacket:
 
 							// *** PAYLOAD PACKET ***
-
-							fmt.Printf("*** payload packet ***\n")
 
 							var sessionId [core.SessionIdBytes]byte
 							for i := 0; i < core.SessionIdBytes; i++ {
@@ -349,8 +347,6 @@ func mainReturnWithCode() int {
 						case core.ChallengeResponsePacket:
 
 							// *** CHALLENGE RESPONSE PACKET ***
-
-							fmt.Printf("*** challenge response packet ***\n")
 
 							var sessionId [core.SessionIdBytes]byte
 							for i := 0; i < core.SessionIdBytes; i++ {

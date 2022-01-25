@@ -24,34 +24,33 @@ DONE
 
 	Client should ignore packets that don't come from the gateway address.
 
-TODO
+	Hack up something suuuuuuper dirty just to get the challenge/response flow going...
+
+	Gateway seems to not be correctly picking up the different packet types. What's up?
+
+	Fixed it, bad index.
 
 	-------------
 
-	Hack up something suuuuuuper dirty just to get the challenge/response flow going...
+	OK. Next step is definitely to include the challenge response in the regular payload packet.
+
+	Since I have intentionally limited only large packets, firing out specific small packets from client -> gateway is not an option.
+
+	thus, it must be included in the client to server packet.
+
+	Suggest, a byte, is it included, and if so, include the challenge response.
+
+	Implies the client should timeout or remomve the challenge response data, once it connects with the server (and then it will be tripped on again, as needed, when it receives a challenge packet).
+
+	-------------
+
+	In order to do the above, definitely need to do this on main thread.
+
+	So we need the recv packet -> channel pipeline going.
 
 	-------------
 	
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+TODO
 
 	-------------
 
@@ -76,5 +75,11 @@ TODO
 	-------------
 
 	Hook up the challenge token in the challenge/response protocol.
+
+	This means including it in the challenge packet, and including the challenge token (encrypted) in the payload packet when it is set on the client.
+
+	Once the client receives a payload packet from the server, with sequence > than the challenge seqeuence **IMPORTANT***
+
+	Then the client may clear the challenge token.
 
 	-------------

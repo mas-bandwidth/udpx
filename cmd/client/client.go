@@ -152,7 +152,7 @@ func mainReturnWithCode() int {
 
 						// todo: hack hack hack -- send back a challenge response packet, so temporary...
 
-						packetData := make([]byte, MaxPacketSize)
+						challengeResponsePacketData := make([]byte, MaxPacketSize)
 
 						payload := make([]byte, core.MinPayloadBytes)
 						for i := 0; i < core.MinPayloadBytes; i++ {
@@ -168,21 +168,21 @@ func mainReturnWithCode() int {
 						ack := uint64(0)
 						ack_bits := [core.AckBitsBytes]byte{}
 						
-						core.WriteUint8(packetData, &index, version)
-						chonkle := packetData[index:index+core.ChonkleBytes]
+						core.WriteUint8(challengeResponsePacketData, &index, version)
+						chonkle := challengeResponsePacketData[index:index+core.ChonkleBytes]
 						index += core.ChonkleBytes
-						core.WriteBytes(packetData, &index, sessionId, core.SessionIdBytes)
-						sequenceData := packetData[index:index+core.SequenceBytes]
-						core.WriteUint64(packetData, &index, sequence)
+						core.WriteBytes(challengeResponsePacketData, &index, sessionId, core.SessionIdBytes)
+						sequenceData := challengeResponsePacketData[index:index+core.SequenceBytes]
+						core.WriteUint64(challengeResponsePacketData, &index, sequence)
 						encryptStart := index
-						core.WriteUint64(packetData, &index, ack)
-						core.WriteBytes(packetData, &index, ack_bits[:], len(ack_bits))
-						core.WriteUint8(packetData, &index, core.ChallengeResponsePacket)
+						core.WriteUint64(challengeResponsePacketData, &index, ack)
+						core.WriteBytes(challengeResponsePacketData, &index, ack_bits[:], len(ack_bits))
+						core.WriteUint8(challengeResponsePacketData, &index, core.ChallengeResponsePacket)
 						// todo: would be considerably better to embed the challenge response in payload packets...
-						core.WriteBytes(packetData, &index, payload[:], core.MinPayloadBytes)
+						core.WriteBytes(challengeResponsePacketData, &index, payload[:], core.MinPayloadBytes)
 						encryptFinish := index
 						index += core.HMACBytes
-						pittle := packetData[index:index+core.PittleBytes]
+						pittle := challengeResponsePacketData[index:index+core.PittleBytes]
 						index += core.PittleBytes
 
 						nonce := make([]byte, core.NonceBytes)
@@ -190,10 +190,10 @@ func mainReturnWithCode() int {
 							nonce[i] = sequenceData[i]
 						}
 
-						core.Encrypt(clientPrivateKey, gatewayPublicKey, nonce, packetData[encryptStart:encryptFinish], encryptFinish - encryptStart)
+						core.Encrypt(clientPrivateKey, gatewayPublicKey, nonce, challengeResponsePacketData[encryptStart:encryptFinish], encryptFinish - encryptStart)
 						
-						packetBytes := index
-						packetData = packetData[:packetBytes]
+						challengeResponsePacketBytes := index
+						challengeResponsePacketData = challengeResponsePacketData[:challengeResponsePacketBytes]
 
 						var magic [core.MagicBytes]byte
 						
@@ -206,19 +206,19 @@ func mainReturnWithCode() int {
 						core.GetAddressData(clientAddress, fromAddressData[:], &fromAddressPort)
 						core.GetAddressData(gatewayAddress, toAddressData[:], &toAddressPort)
 
-						core.GenerateChonkle(chonkle[:], magic[:], fromAddressData[:], fromAddressPort, toAddressData[:], toAddressPort, packetBytes)
+						core.GenerateChonkle(chonkle[:], magic[:], fromAddressData[:], fromAddressPort, toAddressData[:], toAddressPort, challengeResponsePacketBytes)
 
-						core.GeneratePittle(pittle[:], fromAddressData[:], fromAddressPort, toAddressData[:], toAddressPort, packetBytes)
+						core.GeneratePittle(pittle[:], fromAddressData[:], fromAddressPort, toAddressData[:], toAddressPort, challengeResponsePacketBytes)
 
-						if !core.BasicPacketFilter(packetData, packetBytes) {
+						if !core.BasicPacketFilter(challengeResponsePacketData, challengeResponsePacketBytes) {
 							panic("basic packet filter failed")
 						}
 
-						if !core.AdvancedPacketFilter(packetData, magic[:], fromAddressData[:], fromAddressPort, toAddressData[:], toAddressPort, packetBytes) {
+						if !core.AdvancedPacketFilter(challengeResponsePacketData, magic[:], fromAddressData[:], fromAddressPort, toAddressData[:], toAddressPort, challengeResponsePacketBytes) {
 							panic("advanced packet filter failed")
 						}
 
-						if _, err := conn.WriteToUDP(packetData, gatewayAddress); err != nil {
+						if _, err := conn.WriteToUDP(challengeResponsePacketData, gatewayAddress); err != nil {
 							core.Error("failed to write udp packet: %v", err)
 						}
 
