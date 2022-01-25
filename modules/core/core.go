@@ -640,16 +640,13 @@ func WriteEncryptedChallengeToken(buffer []byte, index *int, token *ChallengeTok
 	Encrypt_SecretBox(privateKey, nonce, tokenData, ChallengeTokenBytes)
 }
 
-/*
-func ReadEncryptedChallengeToken(token *ChallengeToken, tokenData []byte, senderPublicKey []byte, receiverPrivateKey []byte) error {
-	if len(tokenData) < EncryptedChallengeTokenBytes {
-		return fmt.Errorf("not enough bytes for encrypted route token")
+func ReadEncryptedChallengeToken(buffer []byte, index *int, token *ChallengeToken, privateKey []byte) bool {
+	nonce := buffer[*index:*index+NonceBytes_SecretBox]
+	*index += NonceBytes_SecretBox
+	tokenData := buffer[*index:*index+ChallengeTokenBytes+HMACBytes_SecretBox]
+	err := Decrypt_SecretBox(privateKey, nonce, tokenData, ChallengeTokenBytes+HMACBytes_SecretBox)	
+	if err != nil {
+		return false
 	}
-	nonce := tokenData[0 : C.crypto_box_NONCEBYTES-1]
-	tokenData = tokenData[C.crypto_box_NONCEBYTES:]
-	if err := Decrypt(senderPublicKey, receiverPrivateKey, nonce, tokenData, NEXT_ROUTE_TOKEN_BYTES+C.crypto_box_MACBYTES); err != nil {
-		return err
-	}
-	return ReadChallengeToken(token, tokenData)
+	return ReadChallengeToken(buffer, index, token)
 }
-*/
