@@ -290,10 +290,9 @@ func TestChallengeToken(t *testing.T) {
 	challengeToken := ChallengeToken{}
 	challengeToken.ExpireTimestamp = uint64(time.Now().Unix() + 10)
 	challengeToken.ClientAddress = *ParseAddress("127.0.0.1:30000")
-	challengeToken.GatewayAddress = *ParseAddress("127.0.0.1:40000")
 	challengeToken.Sequence = 10000
 
-	// write the token to a buffer and read it back in
+	// write the challenge token to a buffer and read it back in
 
 	buffer := make([]byte, EncryptedChallengeTokenBytes)
 
@@ -311,23 +310,17 @@ func TestChallengeToken(t *testing.T) {
 
 	assert.Equal(t, readChallengeToken.ExpireTimestamp, challengeToken.ExpireTimestamp)
 	assert.True(t, AddressEqual(&readChallengeToken.ClientAddress, &challengeToken.ClientAddress))
-	assert.True(t, AddressEqual(&readChallengeToken.GatewayAddress, &challengeToken.GatewayAddress))
 	assert.Equal(t, readChallengeToken.Sequence, challengeToken.Sequence)
-
-	/*
-
-	var readRouteToken RouteToken
-	err := ReadRouteToken(&readRouteToken, buffer)
-
-	assert.NoError(t, err)
-	assert.Equal(t, routeToken, readRouteToken)
 
 	// can't read a token if the buffer is too small
 
-	err = ReadRouteToken(&readRouteToken, buffer[:10])
+	index = 0
 
-	assert.Error(t, err)
+	result = ReadChallengeToken(buffer[:5], &index, &readChallengeToken)
 
+	assert.False(t, result)
+
+	/*
 	// write an encrypted route token and read it back
 
 	WriteEncryptedRouteToken(&routeToken, buffer, masterPrivateKey[:], relayPublicKey[:])

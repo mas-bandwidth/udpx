@@ -612,13 +612,12 @@ type ChallengeToken struct {
 	Sequence        uint64
 }
 
-const ChallengeTokenBytes = 8 + AddressBytes + AddressBytes + 8
+const ChallengeTokenBytes = 8 + AddressBytes + 8
 const EncryptedChallengeTokenBytes = NonceBytes_SecretBox + ChallengeTokenBytes + HMACBytes_SecretBox
 
 func WriteChallengeToken(buffer []byte, index *int, token *ChallengeToken) {
 	WriteUint64(buffer, index, token.ExpireTimestamp)
 	WriteAddress(buffer, index, &token.ClientAddress)
-	WriteAddress(buffer, index, &token.GatewayAddress)
 	WriteUint64(buffer, index, token.Sequence)
 }
 
@@ -628,7 +627,6 @@ func ReadChallengeToken(buffer []byte, index *int, token *ChallengeToken) bool {
 	}
 	ReadUint64(buffer, index, &token.ExpireTimestamp)
 	ReadAddress(buffer, index, &token.ClientAddress)
-	ReadAddress(buffer, index, &token.GatewayAddress)
 	ReadUint64(buffer, index, &token.Sequence)
 	return true
 }
