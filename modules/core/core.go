@@ -66,6 +66,10 @@ const PrivateKeyBytes_Box = 32
 const NonceBytes_Box = 24
 const HMACBytes_Box = 16
 
+const PrivateKeyBytes_SecretBox = 32
+const NonceBytes_SecretBox = 24
+const HMACBytes_SecretBox = 16
+
 const MinPayloadBytes = 1000
 const MinPacketSize = VersionBytes + ChonkleBytes + SessionIdBytes + SequenceBytes + AckBytes + AckBitsBytes + PacketTypeBytes + MinPayloadBytes + HMACBytes_Box + PittleBytes
 
@@ -100,6 +104,12 @@ func Decrypt_Box(senderPublicKey []byte, receiverPrivateKey []byte, nonce []byte
 	} else {
 		return nil
 	}
+}
+
+func Keygen_SecretBox() []byte {
+	key := make([]byte, PrivateKeyBytes_SecretBox)
+	C.crypto_secretbox_keygen((*C.uchar)(&key[0]))
+	return key
 }
 
 var debugLogs bool

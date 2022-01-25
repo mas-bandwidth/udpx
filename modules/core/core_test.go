@@ -170,9 +170,14 @@ func TestEncryptBox(t *testing.T) {
 	senderPublicKey, senderPrivateKey := Keygen_Box()
 	receiverPublicKey, receiverPrivateKey := Keygen_Box()
 
+	assert.Equal(t, PrivateKeyBytes_Box, len(senderPrivateKey))
+	assert.Equal(t, PublicKeyBytes_Box, len(senderPublicKey))
+	assert.Equal(t, PrivateKeyBytes_Box, len(receiverPrivateKey))
+	assert.Equal(t, PublicKeyBytes_Box, len(receiverPublicKey))
+
 	// encrypt random data and verify we can decrypt it
 
-	nonce := RandomBytes(24)
+	nonce := RandomBytes(NonceBytes_Box)
 
 	data := make([]byte, 256)
 	for i := range data {
@@ -206,4 +211,16 @@ func TestEncryptBox(t *testing.T) {
 	err = Decrypt_Box(senderPublicKey[:], receiverPrivateKey[:], nonce, encryptedData, encryptedBytes)
 
 	assert.Error(t, err)
+}
+
+func TestEncryptSecretBox(t *testing.T) {
+
+	privateKey := Keygen_SecretBox()
+
+	assert.Equal(t, PrivateKeyBytes_SecretBox, len(privateKey))
+
+	nonce := RandomBytes(NonceBytes_SecretBox)
+
+	_ = privateKey	
+	_ = nonce
 }
