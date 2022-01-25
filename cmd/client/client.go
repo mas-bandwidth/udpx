@@ -39,7 +39,7 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
-	
+
 	"github.com/networknext/udpx/modules/core"
 	"github.com/networknext/udpx/modules/envvar"
 )
@@ -171,24 +171,24 @@ func mainReturnWithCode() int {
 			quit := false
 			for !quit {
 				select {
-	    			case packetData := <-receivedPackets:
+				case packetData := <-receivedPackets:
 
-				        packetType := packetData[0]
+					packetType := packetData[0]
 
-				        switch packetType {
+					switch packetType {
 
-				        case core.PayloadPacket:
-				        	fmt.Printf("received %d byte payload packet from gateway\n", len(packetData))
-				        	// todo: process payload packet
-				        	// todo: if the payload packet sequence is greater than the challenge token sequence, clear the challenge token
+					case core.PayloadPacket:
+						fmt.Printf("received %d byte payload packet from gateway\n", len(packetData))
+						// todo: process payload packet
+						// todo: if the payload packet sequence is greater than the challenge token sequence, clear the challenge token
 
-				        case core.ChallengePacket:
-				        	fmt.Printf("received %d byte challenge packet from gateway\n", len(packetData))
-				        	// todo: store the challenge token somewhere, so it gets picked up next payload packet. if we already have a challenge token, store this one if its sequence is higher
-				        }
+					case core.ChallengePacket:
+						fmt.Printf("received %d byte challenge packet from gateway\n", len(packetData))
+						// todo: store the challenge token somewhere, so it gets picked up next payload packet. if we already have a challenge token, store this one if its sequence is higher
+					}
 
-				    default:
-				        quit = true
+				default:
+					quit = true
 				}
 			}
 
@@ -202,14 +202,14 @@ func mainReturnWithCode() int {
 			}
 
 			version := byte(0)
-			
+
 			index := 0
 
 			core.WriteUint8(packetData, &index, version)
-			chonkle := packetData[index:index+core.ChonkleBytes]
+			chonkle := packetData[index : index+core.ChonkleBytes]
 			index += core.ChonkleBytes
 			core.WriteBytes(packetData, &index, sessionId, core.SessionIdBytes)
-			sequenceData := packetData[index:index+core.SequenceBytes]
+			sequenceData := packetData[index : index+core.SequenceBytes]
 			core.WriteUint64(packetData, &index, sequence)
 			encryptStart := index
 			core.WriteUint64(packetData, &index, ack)
@@ -218,7 +218,7 @@ func mainReturnWithCode() int {
 			core.WriteBytes(packetData, &index, payload[:], core.MinPayloadBytes)
 			encryptFinish := index
 			index += core.HMACBytes_Box
-			pittle := packetData[index:index+core.PittleBytes]
+			pittle := packetData[index : index+core.PittleBytes]
 			index += core.PittleBytes
 
 			nonce := make([]byte, core.NonceBytes_Box)
@@ -226,19 +226,19 @@ func mainReturnWithCode() int {
 				nonce[i] = sequenceData[i]
 			}
 
-			core.Encrypt_Box(clientPrivateKey, gatewayPublicKey, nonce, packetData[encryptStart:encryptFinish], encryptFinish - encryptStart)
-			
+			core.Encrypt_Box(clientPrivateKey, gatewayPublicKey, nonce, packetData[encryptStart:encryptFinish], encryptFinish-encryptStart)
+
 			packetBytes := index
 			packetData = packetData[:packetBytes]
 
 			var magic [core.MagicBytes]byte
-			
+
 			var fromAddressData [4]byte
 			var fromAddressPort uint16
-	
+
 			var toAddressData [4]byte
 			var toAddressPort uint16
-	
+
 			core.GetAddressData(clientAddress, fromAddressData[:], &fromAddressPort)
 			core.GetAddressData(gatewayAddress, toAddressData[:], &toAddressPort)
 

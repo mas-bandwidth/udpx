@@ -36,15 +36,15 @@ package core
 import "C"
 
 import (
-	"fmt"
-	"net"
-	"os"
-	"math"
 	"bytes"
-	"strconv"
-	"hash/fnv"
 	"crypto/rand"
 	"encoding/binary"
+	"fmt"
+	"hash/fnv"
+	"math"
+	"net"
+	"os"
+	"strconv"
 )
 
 const MagicBytes = 8
@@ -392,30 +392,30 @@ func GeneratePittle(output []byte, fromAddress []byte, fromPort uint16, toAddres
 
 	sum := uint16(0)
 
-    for i := 0; i < len(fromAddress); i++ {
-    	sum += uint16(fromAddress[i])
-    }
+	for i := 0; i < len(fromAddress); i++ {
+		sum += uint16(fromAddress[i])
+	}
 
-    sum += uint16(fromPortData[0])
-    sum += uint16(fromPortData[1])
+	sum += uint16(fromPortData[0])
+	sum += uint16(fromPortData[1])
 
-    for i := 0; i < len(toAddress); i++ {
-    	sum += uint16(toAddress[i])
-    }
+	for i := 0; i < len(toAddress); i++ {
+		sum += uint16(toAddress[i])
+	}
 
-    sum += uint16(toPortData[0])
-    sum += uint16(toPortData[1])
+	sum += uint16(toPortData[0])
+	sum += uint16(toPortData[1])
 
-    sum += uint16(packetLengthData[0])
-    sum += uint16(packetLengthData[1])
-    sum += uint16(packetLengthData[2])
-    sum += uint16(packetLengthData[3])
+	sum += uint16(packetLengthData[0])
+	sum += uint16(packetLengthData[1])
+	sum += uint16(packetLengthData[2])
+	sum += uint16(packetLengthData[3])
 
 	var sumData [2]byte
 	binary.LittleEndian.PutUint16(sumData[:], sum)
 
-    output[0] = 1 | ( sumData[0] ^ sumData[1] ^ 193 );
-    output[1] = 1 | ( ( 255 - output[0] ) ^ 113 );
+	output[0] = 1 | (sumData[0] ^ sumData[1] ^ 193)
+	output[1] = 1 | ((255 - output[0]) ^ 113)
 }
 
 func GenerateChonkle(output []byte, magic []byte, fromAddressData []byte, fromPort uint16, toAddressData []byte, toPort uint16, packetLength int) {
@@ -441,115 +441,115 @@ func GenerateChonkle(output []byte, magic []byte, fromAddressData []byte, fromPo
 	var data [8]byte
 	binary.LittleEndian.PutUint64(data[:], uint64(hashValue))
 
-    output[0] = ( ( data[6] & 0xC0 ) >> 6 ) + 42
-    output[1] = ( data[3] & 0x1F ) + 200
-    output[2] = ( ( data[2] & 0xFC ) >> 2 ) + 5
-    output[3] = data[0]
-    output[4] = ( data[2] & 0x03 ) + 78
-    output[5] = ( data[4] & 0x7F ) + 96
-    output[6] = ( ( data[1] & 0xFC ) >> 2 ) + 100
-    if ( data[7] & 1 ) == 0 { 
-    	output[7] = 79
-    } else { 
-    	output[7] = 7 
-    }
-    if ( data[4] & 0x80 ) == 0 {
-    	output[8] = 37
-    } else { 
-    	output[8] = 83
-    }
-    output[9] = ( data[5] & 0x07 ) + 124
-    output[10] = ( ( data[1] & 0xE0 ) >> 5 ) + 175
-    output[11] = ( data[6] & 0x3F ) + 33
-    value := ( data[1] & 0x03 ); 
-    if value == 0 { 
-    	output[12] = 97
-    } else if value == 1 { 
-    	output[12] = 5
-    } else if value == 2 { 
-    	output[12] = 43
-    } else { 
-    	output[12] = 13
-    }
-    output[13] = ( ( data[5] & 0xF8 ) >> 3 ) + 210
-    output[14] = ( ( data[7] & 0xFE ) >> 1 ) + 17
+	output[0] = ((data[6] & 0xC0) >> 6) + 42
+	output[1] = (data[3] & 0x1F) + 200
+	output[2] = ((data[2] & 0xFC) >> 2) + 5
+	output[3] = data[0]
+	output[4] = (data[2] & 0x03) + 78
+	output[5] = (data[4] & 0x7F) + 96
+	output[6] = ((data[1] & 0xFC) >> 2) + 100
+	if (data[7] & 1) == 0 {
+		output[7] = 79
+	} else {
+		output[7] = 7
+	}
+	if (data[4] & 0x80) == 0 {
+		output[8] = 37
+	} else {
+		output[8] = 83
+	}
+	output[9] = (data[5] & 0x07) + 124
+	output[10] = ((data[1] & 0xE0) >> 5) + 175
+	output[11] = (data[6] & 0x3F) + 33
+	value := (data[1] & 0x03)
+	if value == 0 {
+		output[12] = 97
+	} else if value == 1 {
+		output[12] = 5
+	} else if value == 2 {
+		output[12] = 43
+	} else {
+		output[12] = 13
+	}
+	output[13] = ((data[5] & 0xF8) >> 3) + 210
+	output[14] = ((data[7] & 0xFE) >> 1) + 17
 }
 
 func BasicPacketFilter(packetData []byte, packetLength int) bool {
 
-	data := packetData[1:len(packetData)]
+	data := packetData[1:]
 
-    if data[0] < 0x2A || data[0] > 0x2D {
-        return false
-    }
+	if data[0] < 0x2A || data[0] > 0x2D {
+		return false
+	}
 
-    if data[1] < 0xC8 || data[1] > 0xE7 {
-        return false
-    }
+	if data[1] < 0xC8 || data[1] > 0xE7 {
+		return false
+	}
 
-    if data[2] < 0x05 || data[2] > 0x44 {
-        return false
-    }
+	if data[2] < 0x05 || data[2] > 0x44 {
+		return false
+	}
 
-    if data[4] < 0x4E || data[4] > 0x51 {
-        return false
-    }
+	if data[4] < 0x4E || data[4] > 0x51 {
+		return false
+	}
 
-    if data[5] < 0x60 || data[5] > 0xDF {
-        return false
-    }
+	if data[5] < 0x60 || data[5] > 0xDF {
+		return false
+	}
 
-    if data[6] < 0x64 || data[6] > 0xE3 {
-        return false
-    }
+	if data[6] < 0x64 || data[6] > 0xE3 {
+		return false
+	}
 
-    if data[7] != 0x07 && data[7] != 0x4F {
-        return false
-    }
+	if data[7] != 0x07 && data[7] != 0x4F {
+		return false
+	}
 
-    if data[8] != 0x25 && data[8] != 0x53 {
-        return false
-    }
-    
-    if data[9] < 0x7C || data[9] > 0x83 {
-        return false
-    }
+	if data[8] != 0x25 && data[8] != 0x53 {
+		return false
+	}
 
-    if data[10] < 0xAF || data[10] > 0xB6 {
-        return false
-    }
+	if data[9] < 0x7C || data[9] > 0x83 {
+		return false
+	}
 
-    if data[11] < 0x21 || data[11] > 0x60 {
-        return false
-    }
+	if data[10] < 0xAF || data[10] > 0xB6 {
+		return false
+	}
 
-    if data[12] != 0x61 && data[12] != 0x05 && data[12] != 0x2B && data[12] != 0x0D {
-        return false
-    }
+	if data[11] < 0x21 || data[11] > 0x60 {
+		return false
+	}
 
-    if data[13] < 0xD2 || data[13] > 0xF1 {
-        return false
-    }
+	if data[12] != 0x61 && data[12] != 0x05 && data[12] != 0x2B && data[12] != 0x0D {
+		return false
+	}
 
-    if data[14] < 0x11 || data[14] > 0x90 {
-        return false
-    }
- 
-    return true
+	if data[13] < 0xD2 || data[13] > 0xF1 {
+		return false
+	}
+
+	if data[14] < 0x11 || data[14] > 0x90 {
+		return false
+	}
+
+	return true
 }
 
 func AdvancedPacketFilter(data []byte, magic []byte, fromAddress []byte, fromPort uint16, toAddress []byte, toPort uint16, packetLength int) bool {
-    var a [15]byte
-    var b [2]byte
-    GenerateChonkle(a[:], magic, fromAddress, fromPort, toAddress, toPort, packetLength)
-    GeneratePittle(b[:], fromAddress, fromPort, toAddress, toPort, packetLength)
-    if bytes.Compare(a[0:15], data[1:16]) != 0 {
-        return false
-    }
-    if bytes.Compare(b[0:2], data[packetLength-2:packetLength]) != 0 {
-        return false
-    }
-    return true;
+	var a [15]byte
+	var b [2]byte
+	GenerateChonkle(a[:], magic, fromAddress, fromPort, toAddress, toPort, packetLength)
+	GeneratePittle(b[:], fromAddress, fromPort, toAddress, toPort, packetLength)
+	if bytes.Compare(a[0:15], data[1:16]) != 0 {
+		return false
+	}
+	if bytes.Compare(b[0:2], data[packetLength-2:packetLength]) != 0 {
+		return false
+	}
+	return true
 }
 
 func GetAddressData(address *net.UDPAddr, addressData []byte, addressPort *uint16) {
@@ -600,3 +600,51 @@ func SessionIdString(sessionId []byte) string {
 func AddressEqual(a *net.UDPAddr, b *net.UDPAddr) bool {
 	return net.IP.Equal(a.IP, b.IP) && a.Port == b.Port
 }
+
+type ChallengeToken struct {
+	ExpireTimestamp uint64
+	ClientAddress   net.UDPAddr
+	GatewayAddress  net.UDPAddr
+	Sequence        uint64
+}
+
+func WriteChallengeToken(buffer []byte, index *int, token *ChallengeToken) {
+	WriteUint64(buffer, index, token.ExpireTimestamp)
+	WriteAddress(buffer, index, &token.ClientAddress)
+	WriteAddress(buffer, index, &token.GatewayAddress)
+	WriteUint64(buffer, index, token.Sequence)
+}
+
+/*
+func ReadRouteToken(token *RouteToken, buffer []byte) error {
+	if len(buffer) < NEXT_ROUTE_TOKEN_BYTES {
+		return fmt.Errorf("buffer too small to read route token")
+	}
+	token.ExpireTimestamp = binary.LittleEndian.Uint64(buffer[0:])
+	token.SessionId = binary.LittleEndian.Uint64(buffer[8:])
+	token.SessionVersion = buffer[8+8]
+	token.KbpsUp = binary.LittleEndian.Uint32(buffer[8+8+1:])
+	token.KbpsDown = binary.LittleEndian.Uint32(buffer[8+8+1+4:])
+	token.NextAddress = ReadAddress(buffer[8+8+1+4+4:])
+	copy(token.PrivateKey[:], buffer[8+8+1+4+4+NEXT_ADDRESS_BYTES:])
+	return nil
+}
+
+func WriteEncryptedRouteToken(token *RouteToken, tokenData []byte, senderPrivateKey []byte, receiverPublicKey []byte) {
+	RandomBytes(tokenData[:NonceBytes])
+	WriteRouteToken(token, tokenData[NonceBytes:])
+	Encrypt(senderPrivateKey, receiverPublicKey, tokenData[0:NonceBytes], tokenData[NonceBytes:], NEXT_ROUTE_TOKEN_BYTES)
+}
+
+func ReadEncryptedRouteToken(token *RouteToken, tokenData []byte, senderPublicKey []byte, receiverPrivateKey []byte) error {
+	if len(tokenData) < NEXT_ENCRYPTED_ROUTE_TOKEN_BYTES {
+		return fmt.Errorf("not enough bytes for encrypted route token")
+	}
+	nonce := tokenData[0 : C.crypto_box_NONCEBYTES-1]
+	tokenData = tokenData[C.crypto_box_NONCEBYTES:]
+	if err := Decrypt(senderPublicKey, receiverPrivateKey, nonce, tokenData, NEXT_ROUTE_TOKEN_BYTES+C.crypto_box_MACBYTES); err != nil {
+		return err
+	}
+	return ReadRouteToken(token, tokenData)
+}
+*/

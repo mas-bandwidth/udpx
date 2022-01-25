@@ -189,7 +189,7 @@ func mainReturnWithCode() int {
 			}
 
 			publicSocket[i] = conn
-		}	
+		}
 
 		for i := 0; i < numThreads; i++ {
 
@@ -245,13 +245,13 @@ func mainReturnWithCode() int {
 					// packet filter
 
 					var magic [8]byte
-					
+
 					var fromAddressData [4]byte
 					var fromAddressPort uint16
-			
+
 					var toAddressData [4]byte
 					var toAddressPort uint16
-			
+
 					core.GetAddressData(from, fromAddressData[:], &fromAddressPort)
 					core.GetAddressData(gatewayAddress, toAddressData[:], &toAddressPort)
 
@@ -271,9 +271,9 @@ func mainReturnWithCode() int {
 					sequenceIndex := core.VersionBytes + core.ChonkleBytes + core.SessionIdBytes
 					encryptedDataIndex := core.VersionBytes + core.ChonkleBytes + core.SessionIdBytes + core.SequenceBytes
 
-					senderPublicKey := packetData[publicKeyIndex:publicKeyIndex+core.SessionIdBytes]
-					sequenceData := packetData[sequenceIndex:sequenceIndex+core.SequenceBytes]
-					encryptedData := packetData[encryptedDataIndex:packetBytes-core.PittleBytes]
+					senderPublicKey := packetData[publicKeyIndex : publicKeyIndex+core.SessionIdBytes]
+					sequenceData := packetData[sequenceIndex : sequenceIndex+core.SequenceBytes]
+					encryptedData := packetData[encryptedDataIndex : packetBytes-core.PittleBytes]
 
 					nonce := make([]byte, core.NonceBytes_Box)
 					for i := 0; i < core.SequenceBytes; i++ {
@@ -289,7 +289,7 @@ func mainReturnWithCode() int {
 					// decrypt payload
 
 					payloadIndex := core.VersionBytes + core.ChonkleBytes
-					payloadData := packetData[payloadIndex:packetBytes-core.PittleBytes-core.HMACBytes_Box]
+					payloadData := packetData[payloadIndex : packetBytes-core.PittleBytes-core.HMACBytes_Box]
 					payloadBytes := len(payloadData)
 
 					// ignore packet types we don't know how to process
@@ -334,7 +334,7 @@ func mainReturnWithCode() int {
 					index := 0
 					core.WriteAddress(forwardPacketData, &index, gatewayInternalAddress)
 					core.WriteAddress(forwardPacketData, &index, from)
-					core.WriteBytes(forwardPacketData, &index, payloadData, payloadBytes)	// todo: obvs this should be zero copy
+					core.WriteBytes(forwardPacketData, &index, payloadData, payloadBytes) // todo: obvs this should be zero copy
 
 					forwardPacketBytes := index
 					forwardPacketData = forwardPacketData[:forwardPacketBytes]
@@ -346,15 +346,15 @@ func mainReturnWithCode() int {
 
 					// todo: challenge response will be included inside payload packets
 					/*
-					// *** CHALLENGE RESPONSE PACKET ***
+						// *** CHALLENGE RESPONSE PACKET ***
 
-					var sessionId [core.SessionIdBytes]byte
-					for i := 0; i < core.SessionIdBytes; i++ {
-						sessionId[i] = senderPublicKey[i]
-					}
+						var sessionId [core.SessionIdBytes]byte
+						for i := 0; i < core.SessionIdBytes; i++ {
+							sessionId[i] = senderPublicKey[i]
+						}
 
-					sessionEntry := &SessionEntry{}
-					sessionMap_New[sessionId] = sessionEntry
+						sessionEntry := &SessionEntry{}
+						sessionMap_New[sessionId] = sessionEntry
 					*/
 				}
 
@@ -423,7 +423,7 @@ func mainReturnWithCode() int {
 
 					fmt.Printf("recv internal %d byte packet from %s\n", packetBytes, from.String())
 
-					if packetBytes <= core.PacketTypeBytes + core.VersionBytes + core.AddressBytes {
+					if packetBytes <= core.PacketTypeBytes+core.VersionBytes+core.AddressBytes {
 						fmt.Printf("internal packet is too small\n")
 						continue
 					}
