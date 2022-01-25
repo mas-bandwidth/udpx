@@ -1,21 +1,24 @@
 DONE
 
+	Implement secret box primitives and write tests for them
+
+	Sketch out challenge token contents
+
+	Implement read/write challenge token
+
+	Implement write encrypted challenge token
+
 TODO
 
 	-------------
 
-	Implement challenge token and add unit tests for it
-
-	Challenge token should be encrypted (not readable by client) and have:
-
-		sequence
-		timestamp 
-		client address + port
-		gateway address + port
+	Implement test for read/write challenge token
 
 	-------------
 
-	The challenge packet should include the sequence that the challenge token was generated at, so the client can decide if the challenge packet is newer and update it.
+	Implement read encrypted challenge token
+
+	Implement tests for read/write encrypted challenge token
 
 	-------------
 
