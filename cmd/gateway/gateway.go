@@ -302,6 +302,8 @@ func mainReturnWithCode() int {
 
 							// *** PAYLOAD PACKET ***
 
+							fmt.Printf("*** payload packet ***\n")
+
 							var sessionId [core.SessionIdBytes]byte
 							for i := 0; i < core.SessionIdBytes; i++ {
 								sessionId[i] = senderPublicKey[i]
@@ -347,6 +349,8 @@ func mainReturnWithCode() int {
 						case core.ChallengeResponsePacket:
 
 							// *** CHALLENGE RESPONSE PACKET ***
+
+							fmt.Printf("*** challenge response packet ***\n")
 
 							var sessionId [core.SessionIdBytes]byte
 							for i := 0; i < core.SessionIdBytes; i++ {

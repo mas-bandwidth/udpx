@@ -86,6 +86,8 @@ func mainReturnWithCode() int {
 
 	clientPublicKey, clientPrivateKey := core.Keygen()
 
+	sessionId := clientPublicKey
+
 	gatewayPublicKey, err := envvar.GetBase64("GATEWAY_PUBLIC_KEY", nil)
 	if err != nil || len(gatewayPublicKey) != core.PublicKeyBytes {
 		core.Error("missing or invalid GATEWAY_PUBLIC_KEY: %v\n", err)
@@ -145,7 +147,83 @@ func mainReturnWithCode() int {
 						break
 
 					case core.ChallengePacket:
+
 						fmt.Printf("recv %d byte challenge packet from %s\n", packetBytes, from)
+
+						// todo: hack hack hack -- send back a challenge response packet, so temporary...
+
+						packetData := make([]byte, MaxPacketSize)
+
+						payload := make([]byte, core.MinPayloadBytes)
+						for i := 0; i < core.MinPayloadBytes; i++ {
+							payload[i] = byte(i)
+						}
+
+						version := byte(0)
+						
+						index := 0
+
+						// todo: haxxx
+						sequence := uint64(0)
+						ack := uint64(0)
+						ack_bits := [core.AckBitsBytes]byte{}
+						
+						core.WriteUint8(packetData, &index, version)
+						chonkle := packetData[index:index+core.ChonkleBytes]
+						index += core.ChonkleBytes
+						core.WriteBytes(packetData, &index, sessionId, core.SessionIdBytes)
+						sequenceData := packetData[index:index+core.SequenceBytes]
+						core.WriteUint64(packetData, &index, sequence)
+						encryptStart := index
+						core.WriteUint64(packetData, &index, ack)
+						core.WriteBytes(packetData, &index, ack_bits[:], len(ack_bits))
+						core.WriteUint8(packetData, &index, core.ChallengeResponsePacket)
+						// todo: would be considerably better to embed the challenge response in payload packets...
+						core.WriteBytes(packetData, &index, payload[:], core.MinPayloadBytes)
+						encryptFinish := index
+						index += core.HMACBytes
+						pittle := packetData[index:index+core.PittleBytes]
+						index += core.PittleBytes
+
+						nonce := make([]byte, core.NonceBytes)
+						for i := 0; i < core.SequenceBytes; i++ {
+							nonce[i] = sequenceData[i]
+						}
+
+						core.Encrypt(clientPrivateKey, gatewayPublicKey, nonce, packetData[encryptStart:encryptFinish], encryptFinish - encryptStart)
+						
+						packetBytes := index
+						packetData = packetData[:packetBytes]
+
+						var magic [core.MagicBytes]byte
+						
+						var fromAddressData [4]byte
+						var fromAddressPort uint16
+				
+						var toAddressData [4]byte
+						var toAddressPort uint16
+				
+						core.GetAddressData(clientAddress, fromAddressData[:], &fromAddressPort)
+						core.GetAddressData(gatewayAddress, toAddressData[:], &toAddressPort)
+
+						core.GenerateChonkle(chonkle[:], magic[:], fromAddressData[:], fromAddressPort, toAddressData[:], toAddressPort, packetBytes)
+
+						core.GeneratePittle(pittle[:], fromAddressData[:], fromAddressPort, toAddressData[:], toAddressPort, packetBytes)
+
+						if !core.BasicPacketFilter(packetData, packetBytes) {
+							panic("basic packet filter failed")
+						}
+
+						if !core.AdvancedPacketFilter(packetData, magic[:], fromAddressData[:], fromAddressPort, toAddressData[:], toAddressPort, packetBytes) {
+							panic("advanced packet filter failed")
+						}
+
+						if _, err := conn.WriteToUDP(packetData, gatewayAddress); err != nil {
+							core.Error("failed to write udp packet: %v", err)
+						}
+
+						fmt.Printf("*** sent challenge response ***\n")
+
 						break
 				}
 
@@ -157,7 +235,6 @@ func mainReturnWithCode() int {
 
 		// main loop
 
-		sessionId := clientPublicKey
 		if len(sessionId) != core.SessionIdBytes {
 			panic(fmt.Sprintf("public key must be %d bytes", core.SessionIdBytes))
 		}
@@ -176,8 +253,12 @@ func mainReturnWithCode() int {
 			for i := 0; i < core.MinPayloadBytes; i++ {
 				payload[i] = byte(i)
 			}
+
+			version := byte(0)
 			
-			index := core.VersionBytes
+			index := 0
+
+			core.WriteUint8(packetData, &index, version)
 			chonkle := packetData[index:index+core.ChonkleBytes]
 			index += core.ChonkleBytes
 			core.WriteBytes(packetData, &index, sessionId, core.SessionIdBytes)
