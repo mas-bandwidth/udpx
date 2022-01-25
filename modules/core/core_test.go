@@ -165,10 +165,10 @@ func TestAdvancedBasicPacketFilter(t *testing.T) {
 	}
 }
 
-func TestEncrypt(t *testing.T) {
+func TestEncryptBox(t *testing.T) {
 
-	senderPublicKey, senderPrivateKey := Keygen()
-	receiverPublicKey, receiverPrivateKey := Keygen()
+	senderPublicKey, senderPrivateKey := Keygen_Box()
+	receiverPublicKey, receiverPrivateKey := Keygen_Box()
 
 	// encrypt random data and verify we can decrypt it
 
@@ -181,11 +181,11 @@ func TestEncrypt(t *testing.T) {
 
 	encryptedData := make([]byte, 256+16)
 
-	encryptedBytes := Encrypt(senderPrivateKey[:], receiverPublicKey[:], nonce, encryptedData, len(data))
+	encryptedBytes := Encrypt_Box(senderPrivateKey[:], receiverPublicKey[:], nonce, encryptedData, len(data))
 
 	assert.Equal(t, 256+16, encryptedBytes)
 
-	err := Decrypt(senderPublicKey[:], receiverPrivateKey[:], nonce, encryptedData, encryptedBytes)
+	err := Decrypt_Box(senderPublicKey[:], receiverPrivateKey[:], nonce, encryptedData, encryptedBytes)
 
 	assert.NoError(t, err)
 
@@ -193,7 +193,7 @@ func TestEncrypt(t *testing.T) {
 
 	garbageData := RandomBytes(256+16)
 
-	err = Decrypt(senderPublicKey[:], receiverPrivateKey[:], nonce, garbageData, encryptedBytes)
+	err = Decrypt_Box(senderPublicKey[:], receiverPrivateKey[:], nonce, garbageData, encryptedBytes)
 
 	assert.Error(t, err)
 
@@ -203,7 +203,7 @@ func TestEncrypt(t *testing.T) {
 		receiverPrivateKey[i] = byte(i)
 	}
 
-	err = Decrypt(senderPublicKey[:], receiverPrivateKey[:], nonce, encryptedData, encryptedBytes)
+	err = Decrypt_Box(senderPublicKey[:], receiverPrivateKey[:], nonce, encryptedData, encryptedBytes)
 
 	assert.Error(t, err)
 }

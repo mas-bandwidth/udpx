@@ -90,7 +90,7 @@ func mainReturnWithCode() int {
 	}
 
 	gatewayPrivateKey, err := envvar.GetBase64("GATEWAY_PRIVATE_KEY", nil)
-	if err != nil || len(gatewayPrivateKey) != core.PrivateKeyBytes {
+	if err != nil || len(gatewayPrivateKey) != core.PrivateKeyBytes_Box {
 		core.Error("missing or invalid GATEWAY_PRIVATE_KEY: %v\n", err)
 		return 1
 	}
@@ -275,12 +275,12 @@ func mainReturnWithCode() int {
 					sequenceData := packetData[sequenceIndex:sequenceIndex+core.SequenceBytes]
 					encryptedData := packetData[encryptedDataIndex:packetBytes-core.PittleBytes]
 
-					nonce := make([]byte, core.NonceBytes)
+					nonce := make([]byte, core.NonceBytes_Box)
 					for i := 0; i < core.SequenceBytes; i++ {
 						nonce[i] = sequenceData[i]
 					}
 
-					err = core.Decrypt(senderPublicKey, gatewayPrivateKey, nonce, encryptedData, len(encryptedData))
+					err = core.Decrypt_Box(senderPublicKey, gatewayPrivateKey, nonce, encryptedData, len(encryptedData))
 					if err != nil {
 						fmt.Printf("decryption failed\n")
 						continue
@@ -289,72 +289,73 @@ func mainReturnWithCode() int {
 					// decrypt payload
 
 					payloadIndex := core.VersionBytes + core.ChonkleBytes
-					payloadData := packetData[payloadIndex:packetBytes-core.PittleBytes-core.HMACBytes]
+					payloadData := packetData[payloadIndex:packetBytes-core.PittleBytes-core.HMACBytes_Box]
 					payloadBytes := len(payloadData)
 
-					// what sort of packet is this?
+					// ignore packet types we don't know how to process
 
 					packetType := payloadData[core.SessionIdBytes+core.SequenceBytes+core.AckBytes+core.AckBitsBytes]
 
-					switch packetType {
+					if packetType != core.PayloadPacket {
+						fmt.Printf("unknown packet type: %d\n", packetType)
+						continue
+					}
 
-						case core.PayloadPacket:
+					// process payload packet
 
-							// *** PAYLOAD PACKET ***
+					var sessionId [core.SessionIdBytes]byte
+					for i := 0; i < core.SessionIdBytes; i++ {
+						sessionId[i] = senderPublicKey[i]
+					}
 
-							var sessionId [core.SessionIdBytes]byte
-							for i := 0; i < core.SessionIdBytes; i++ {
-								sessionId[i] = senderPublicKey[i]
-							}
-
-							sessionEntry := sessionMap_New[sessionId]
-							if sessionEntry == nil {
-								sessionEntry = sessionMap_Old[sessionId]
-								if sessionEntry != nil {
-									// migrate old -> new
-									sessionMap_New[sessionId] = sessionEntry
-								}
-							}
-
-							if sessionEntry == nil {
-								challengePacketData := make([]byte, 1)
-								challengePacketData[0] = core.ChallengePacket
-								if _, err := conn.WriteToUDP(challengePacketData, from); err != nil {
-									core.Error("failed to send challenge packet to client: %v", err)
-								}
-								fmt.Printf("send %d byte challenge packet to %s\n", len(challengePacketData), from.String())
-								continue
-							}
-
-							// forward payload packet to server
-
-							forwardPacketData := make([]byte, MaxPacketSize)
-
-							index := 0
-							core.WriteAddress(forwardPacketData, &index, gatewayInternalAddress)
-							core.WriteAddress(forwardPacketData, &index, from)
-							core.WriteBytes(forwardPacketData, &index, payloadData, payloadBytes)	// todo: obvs this should be zero copy
-
-							forwardPacketBytes := index
-							forwardPacketData = forwardPacketData[:forwardPacketBytes]
-
-							if _, err := conn.WriteToUDP(forwardPacketData, serverAddress); err != nil {
-								core.Error("failed to forward payload to server: %v", err)
-							}
-							fmt.Printf("send %d byte packet to %s\n", forwardPacketBytes, serverAddress.String())
-
-						case core.ChallengeResponsePacket:
-
-							// *** CHALLENGE RESPONSE PACKET ***
-
-							var sessionId [core.SessionIdBytes]byte
-							for i := 0; i < core.SessionIdBytes; i++ {
-								sessionId[i] = senderPublicKey[i]
-							}
-
-							sessionEntry := &SessionEntry{}
+					sessionEntry := sessionMap_New[sessionId]
+					if sessionEntry == nil {
+						sessionEntry = sessionMap_Old[sessionId]
+						if sessionEntry != nil {
+							// migrate old -> new
 							sessionMap_New[sessionId] = sessionEntry
 						}
+					}
+
+					if sessionEntry == nil {
+						challengePacketData := make([]byte, 1)
+						challengePacketData[0] = core.ChallengePacket
+						if _, err := conn.WriteToUDP(challengePacketData, from); err != nil {
+							core.Error("failed to send challenge packet to client: %v", err)
+						}
+						fmt.Printf("send %d byte challenge packet to %s\n", len(challengePacketData), from.String())
+						continue
+					}
+
+					// forward payload packet to server
+
+					forwardPacketData := make([]byte, MaxPacketSize)
+
+					index := 0
+					core.WriteAddress(forwardPacketData, &index, gatewayInternalAddress)
+					core.WriteAddress(forwardPacketData, &index, from)
+					core.WriteBytes(forwardPacketData, &index, payloadData, payloadBytes)	// todo: obvs this should be zero copy
+
+					forwardPacketBytes := index
+					forwardPacketData = forwardPacketData[:forwardPacketBytes]
+
+					if _, err := conn.WriteToUDP(forwardPacketData, serverAddress); err != nil {
+						core.Error("failed to forward payload to server: %v", err)
+					}
+					fmt.Printf("send %d byte packet to %s\n", forwardPacketBytes, serverAddress.String())
+
+					// todo: challenge response will be included inside payload packets
+					/*
+					// *** CHALLENGE RESPONSE PACKET ***
+
+					var sessionId [core.SessionIdBytes]byte
+					for i := 0; i < core.SessionIdBytes; i++ {
+						sessionId[i] = senderPublicKey[i]
+					}
+
+					sessionEntry := &SessionEntry{}
+					sessionMap_New[sessionId] = sessionEntry
+					*/
 				}
 
 				wg.Done()

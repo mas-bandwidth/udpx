@@ -47,10 +47,6 @@ import (
 	"encoding/binary"
 )
 
-const PublicKeyBytes = 32
-const PrivateKeyBytes = 32
-const NonceBytes = 24
-const HMACBytes = 16
 const MagicBytes = 8
 const VersionBytes = 1
 const ChonkleBytes = 15
@@ -61,31 +57,37 @@ const AckBitsBytes = 32
 const PittleBytes = 2
 const AddressBytes = 19
 const PacketTypeBytes = 1
-const MinPayloadBytes = 1000
-const MinPacketSize = VersionBytes + ChonkleBytes + SessionIdBytes + SequenceBytes + AckBytes + AckBitsBytes + PacketTypeBytes + MinPayloadBytes + HMACBytes + PittleBytes
 
 const PayloadPacket = byte(0)
 const ChallengePacket = byte(1)
 
-func Keygen() ([]byte, []byte) {
-	var publicKey [PublicKeyBytes]byte
-	var privateKey [PrivateKeyBytes]byte
+const PublicKeyBytes_Box = 32
+const PrivateKeyBytes_Box = 32
+const NonceBytes_Box = 24
+const HMACBytes_Box = 16
+
+const MinPayloadBytes = 1000
+const MinPacketSize = VersionBytes + ChonkleBytes + SessionIdBytes + SequenceBytes + AckBytes + AckBitsBytes + PacketTypeBytes + MinPayloadBytes + HMACBytes_Box + PittleBytes
+
+func Keygen_Box() ([]byte, []byte) {
+	var publicKey [PublicKeyBytes_Box]byte
+	var privateKey [PrivateKeyBytes_Box]byte
 	C.crypto_box_keypair((*C.uchar)(&publicKey[0]),
 		(*C.uchar)(&privateKey[0]))
 	return publicKey[:], privateKey[:]
 }
 
-func Encrypt(senderPrivateKey []byte, receiverPublicKey []byte, nonce []byte, buffer []byte, bytes int) int {
+func Encrypt_Box(senderPrivateKey []byte, receiverPublicKey []byte, nonce []byte, buffer []byte, bytes int) int {
 	C.crypto_box_easy((*C.uchar)(&buffer[0]),
 		(*C.uchar)(&buffer[0]),
 		C.ulonglong(bytes),
 		(*C.uchar)(&nonce[0]),
 		(*C.uchar)(&receiverPublicKey[0]),
 		(*C.uchar)(&senderPrivateKey[0]))
-	return bytes + C.crypto_box_MACBYTES
+	return bytes + HMACBytes_Box
 }
 
-func Decrypt(senderPublicKey []byte, receiverPrivateKey []byte, nonce []byte, buffer []byte, bytes int) error {
+func Decrypt_Box(senderPublicKey []byte, receiverPrivateKey []byte, nonce []byte, buffer []byte, bytes int) error {
 	result := C.crypto_box_open_easy(
 		(*C.uchar)(&buffer[0]),
 		(*C.uchar)(&buffer[0]),

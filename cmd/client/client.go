@@ -84,12 +84,12 @@ func mainReturnWithCode() int {
 		return 1
 	}
 
-	clientPublicKey, clientPrivateKey := core.Keygen()
+	clientPublicKey, clientPrivateKey := core.Keygen_Box()
 
 	sessionId := clientPublicKey
 
 	gatewayPublicKey, err := envvar.GetBase64("GATEWAY_PUBLIC_KEY", nil)
-	if err != nil || len(gatewayPublicKey) != core.PublicKeyBytes {
+	if err != nil || len(gatewayPublicKey) != core.PublicKeyBytes_Box {
 		core.Error("missing or invalid GATEWAY_PUBLIC_KEY: %v\n", err)
 		return 1
 	}
@@ -217,16 +217,16 @@ func mainReturnWithCode() int {
 			core.WriteUint8(packetData, &index, core.PayloadPacket)
 			core.WriteBytes(packetData, &index, payload[:], core.MinPayloadBytes)
 			encryptFinish := index
-			index += core.HMACBytes
+			index += core.HMACBytes_Box
 			pittle := packetData[index:index+core.PittleBytes]
 			index += core.PittleBytes
 
-			nonce := make([]byte, core.NonceBytes)
+			nonce := make([]byte, core.NonceBytes_Box)
 			for i := 0; i < core.SequenceBytes; i++ {
 				nonce[i] = sequenceData[i]
 			}
 
-			core.Encrypt(clientPrivateKey, gatewayPublicKey, nonce, packetData[encryptStart:encryptFinish], encryptFinish - encryptStart)
+			core.Encrypt_Box(clientPrivateKey, gatewayPublicKey, nonce, packetData[encryptStart:encryptFinish], encryptFinish - encryptStart)
 			
 			packetBytes := index
 			packetData = packetData[:packetBytes]

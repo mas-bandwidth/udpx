@@ -39,7 +39,7 @@ import (
 
 func main() {
 
-	publicKey, privateKey := core.Keygen()
+	publicKey, privateKey := core.Keygen_Box()
 
 	publicKey_base64 := base64.StdEncoding.EncodeToString(publicKey)
 	privateKey_base64 := base64.StdEncoding.EncodeToString(privateKey)
