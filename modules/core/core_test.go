@@ -184,11 +184,11 @@ func TestEncryptBox(t *testing.T) {
 		data[i] = byte(data[i])
 	}
 
-	encryptedData := make([]byte, 256+16)
+	encryptedData := make([]byte, 256+HMACBytes_Box)
 
 	encryptedBytes := Encrypt_Box(senderPrivateKey[:], receiverPublicKey[:], nonce, encryptedData, len(data))
 
-	assert.Equal(t, 256+16, encryptedBytes)
+	assert.Equal(t, 256+HMACBytes_Box, encryptedBytes)
 
 	err := Decrypt_Box(senderPublicKey[:], receiverPrivateKey[:], nonce, encryptedData, encryptedBytes)
 
@@ -196,7 +196,7 @@ func TestEncryptBox(t *testing.T) {
 
 	// decryption should fail with garbage data
 
-	garbageData := RandomBytes(256+16)
+	garbageData := RandomBytes(256+HMACBytes_Box)
 
 	err = Decrypt_Box(senderPublicKey[:], receiverPrivateKey[:], nonce, garbageData, encryptedBytes)
 
@@ -221,6 +221,38 @@ func TestEncryptSecretBox(t *testing.T) {
 
 	nonce := RandomBytes(NonceBytes_SecretBox)
 
-	_ = privateKey	
-	_ = nonce
+	// encrypt random data and verify we can decrypt it
+
+	data := make([]byte, 256)
+	for i := range data {
+		data[i] = byte(data[i])
+	}
+
+	encryptedData := make([]byte, 256+HMACBytes_SecretBox)
+
+	encryptedBytes := Encrypt_SecretBox(privateKey[:], nonce, encryptedData, len(data))
+
+	assert.Equal(t, 256+HMACBytes_SecretBox, encryptedBytes)
+
+	err := Decrypt_SecretBox(privateKey[:], nonce, encryptedData, encryptedBytes)
+
+	assert.NoError(t, err)
+
+	// decryption should fail with garbage data
+
+	garbageData := RandomBytes(256+HMACBytes_SecretBox)
+
+	err = Decrypt_SecretBox(privateKey[:], nonce, garbageData, encryptedBytes)
+
+	assert.Error(t, err)
+
+	// decryption should fail with the wrong receiver private key
+
+	for i := 0; i < 32; i++ {
+		privateKey[i] = byte(i)
+	}
+
+	err = Decrypt_SecretBox(privateKey[:], nonce, encryptedData, encryptedBytes)
+
+	assert.Error(t, err)
 }
