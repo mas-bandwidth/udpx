@@ -1,31 +1,31 @@
 DONE
 
-TODO
-
-	-------------
-
 	Add packet types:
 
 		0: payload
 		1: challenge
 		2. challenge response
 
-	-------------
+	Add packet type to client -> gateway packet
+
+	Handle the payload packet type by forwarding to server (todo, check for establish session w. gateway first...)
 
 	Add session map with double buffered idea for automatic timeouts
 
-	Initially, insert into session map without challenge/response, just to make sure that
+	Initially, insert into session map without challenge/response, just to make sure that the idea works
+
+TODO
 
 	-------------
 
-	Implement timeout on the client.go side, make it configurable, but initially setting to 10 seconds is fine.
+	Sketch out the flow with challenge and response packets
 
 	-------------
 
-	Implement challenge token and test it
+	Implement challenge token and add unit tests for it
 
 	-------------
 
-	Actually hook up challenge/response protocol gating additions to the session map on the gateway.
+	Hook up the challenge token in the challenge/response protocol.
 
 	-------------

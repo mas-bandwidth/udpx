@@ -171,6 +171,7 @@ func mainReturnWithCode() int {
 			encryptStart := index
 			core.WriteUint64(packetData, &index, ack)
 			core.WriteBytes(packetData, &index, ack_bits[:], len(ack_bits))
+			core.WriteUint8(packetData, &index, core.PayloadPacket)
 			core.WriteBytes(packetData, &index, payload[:], core.MinPayloadBytes)
 			encryptFinish := index
 			index += core.HMACBytes

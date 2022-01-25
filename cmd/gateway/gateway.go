@@ -45,6 +45,7 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/networknext/udpx/modules/core"
 	"github.com/networknext/udpx/modules/envvar"
@@ -54,6 +55,11 @@ import (
 )
 
 const MaxPacketSize = 1500
+const SessionMapSwapTime = 60
+
+type SessionEntry struct {
+	sequence uint64
+}
 
 func main() {
 	os.Exit(mainReturnWithCode())
@@ -195,12 +201,29 @@ func mainReturnWithCode() int {
 
 				buffer := [MaxPacketSize]byte{}
 
+				sessionMap_Old := make(map[[core.SessionIdBytes]byte]*SessionEntry)
+				sessionMap_New := make(map[[core.SessionIdBytes]byte]*SessionEntry)
+
+				swapTime := time.Now().Unix() + SessionMapSwapTime
+				swapCount := 0
+
 				for {
 
 					packetBytes, from, err := conn.ReadFromUDP(buffer[:])
 					if err != nil {
 						core.Error("failed to read udp packet: %v", err)
 						break
+					}
+
+					swapCount++
+					if swapCount > 100 {
+						currentTime := time.Now().Unix()
+						if currentTime >= swapTime {
+							swapCount = 0
+							swapTime = currentTime + SessionMapSwapTime
+							sessionMap_Old = sessionMap_New
+							sessionMap_New = make(map[[core.SessionIdBytes]byte]*SessionEntry)
+						}
 					}
 
 					if packetBytes < core.MinPacketSize {
@@ -263,31 +286,65 @@ func mainReturnWithCode() int {
 						continue
 					}
 
-					// extract payload
+					// decrypt payload
 
-					payloadData := packetData[core.VersionBytes+core.ChonkleBytes:packetBytes-core.PittleBytes-core.HMACBytes]
+					payloadIndex := core.VersionBytes+core.ChonkleBytes
+					payloadData := packetData[payloadIndex:packetBytes-core.PittleBytes-core.HMACBytes]
 					payloadBytes := len(payloadData)
 
-					// forward payload to server
+					// what sort of packet is this?
 
-					forwardPacketData := make([]byte, MaxPacketSize)
+					packetType := payloadData[core.SequenceBytes+core.AckBytes+core.AckBitsBytes]
 
-					// todo: this should be zero copy
+					switch packetType {
 
-					fmt.Printf("gateway internal address is %s\n", gatewayInternalAddress.String())
+						case core.PayloadPacket:
 
-					index := 0
-					core.WriteAddress(forwardPacketData, &index, gatewayInternalAddress)
-					core.WriteAddress(forwardPacketData, &index, from)
-					core.WriteBytes(forwardPacketData, &index, payloadData, payloadBytes)
+							// *** PAYLOAD PACKET ***
 
-					forwardPacketBytes := index
-					forwardPacketData = forwardPacketData[:forwardPacketBytes]
+							var sessionId [core.SessionIdBytes]byte
+							for i := 0; i < core.SessionIdBytes; i++ {
+								sessionId[i] = senderPublicKey[i]
+							}
 
-					if _, err := conn.WriteToUDP(forwardPacketData, serverAddress); err != nil {
-						core.Error("failed to forward payload to server: %v", err)
+							sessionEntry := sessionMap_New[sessionId]
+							if sessionEntry == nil {
+								sessionEntry = sessionMap_Old[sessionId]
+								if sessionEntry != nil {
+									// migrate old -> new
+									sessionMap_New[sessionId] = sessionEntry
+								}
+							}
+
+							// todo: if there is no session entry, do the challenge/response dance
+							if sessionEntry == nil {
+								sessionEntry = &SessionEntry{}
+								sessionMap_New[sessionId] = sessionEntry
+							}
+
+							// forward payload packet to server
+
+							forwardPacketData := make([]byte, MaxPacketSize)
+
+							index := 0
+							core.WriteAddress(forwardPacketData, &index, gatewayInternalAddress)
+							core.WriteAddress(forwardPacketData, &index, from)
+							core.WriteBytes(forwardPacketData, &index, payloadData, payloadBytes)	// todo: obvs this should be zero copy
+
+							forwardPacketBytes := index
+							forwardPacketData = forwardPacketData[:forwardPacketBytes]
+
+							if _, err := conn.WriteToUDP(forwardPacketData, serverAddress); err != nil {
+								core.Error("failed to forward payload to server: %v", err)
+							}
+							fmt.Printf("send %d byte packet to %s\n", payloadBytes, serverAddress.String())
+
+						case core.ChallengeResponsePacket:
+
+							// *** CHALLENGE RESPONSE PACKET ***
+
+							// todo: handle challenge response packet
 					}
-					fmt.Printf("send %d byte packet to %s\n", payloadBytes, serverAddress.String())
 				}
 
 				wg.Done()
