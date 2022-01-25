@@ -608,6 +608,8 @@ type ChallengeToken struct {
 	Sequence        uint64
 }
 
+const RouteTokenBytes = 8 + AddressBytes + AddressBytes + 8
+
 func WriteChallengeToken(buffer []byte, index *int, token *ChallengeToken) {
 	WriteUint64(buffer, index, token.ExpireTimestamp)
 	WriteAddress(buffer, index, &token.ClientAddress)
@@ -615,21 +617,18 @@ func WriteChallengeToken(buffer []byte, index *int, token *ChallengeToken) {
 	WriteUint64(buffer, index, token.Sequence)
 }
 
-/*
-func ReadRouteToken(token *RouteToken, buffer []byte) error {
-	if len(buffer) < NEXT_ROUTE_TOKEN_BYTES {
-		return fmt.Errorf("buffer too small to read route token")
+func ReadChallengeToken(buffer []byte, index *int, token *ChallengeToken) bool {
+	if len(buffer) - *index < RouteTokenBytes {
+		return false
 	}
-	token.ExpireTimestamp = binary.LittleEndian.Uint64(buffer[0:])
-	token.SessionId = binary.LittleEndian.Uint64(buffer[8:])
-	token.SessionVersion = buffer[8+8]
-	token.KbpsUp = binary.LittleEndian.Uint32(buffer[8+8+1:])
-	token.KbpsDown = binary.LittleEndian.Uint32(buffer[8+8+1+4:])
-	token.NextAddress = ReadAddress(buffer[8+8+1+4+4:])
-	copy(token.PrivateKey[:], buffer[8+8+1+4+4+NEXT_ADDRESS_BYTES:])
-	return nil
+	ReadUint64(buffer, index, &token.ExpireTimestamp)
+	ReadAddress(buffer, index, &token.ClientAddress)
+	ReadAddress(buffer, index, &token.GatewayAddress)
+	ReadUint64(buffer, index, &token.Sequence)
+	return true
 }
 
+/*
 func WriteEncryptedRouteToken(token *RouteToken, tokenData []byte, senderPrivateKey []byte, receiverPublicKey []byte) {
 	RandomBytes(tokenData[:NonceBytes])
 	WriteRouteToken(token, tokenData[NonceBytes:])
