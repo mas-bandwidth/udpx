@@ -379,6 +379,10 @@ func RandomBytes(bytes int) []byte {
 	return buffer
 }
 
+func RandomBytes_InPlace(buffer []byte) {
+	_, _ = rand.Read(buffer)
+}
+
 func GeneratePittle(output []byte, fromAddress []byte, fromPort uint16, toAddress []byte, toPort uint16, packetLength int) {
 
 	var fromPortData [2]byte
@@ -608,7 +612,8 @@ type ChallengeToken struct {
 	Sequence        uint64
 }
 
-const RouteTokenBytes = 8 + AddressBytes + AddressBytes + 8
+const ChallengeTokenBytes = 8 + AddressBytes + AddressBytes + 8
+const EncryptedChallengeTokenBytes = NonceBytes_SecretBox + ChallengeTokenBytes + HMACBytes_SecretBox
 
 func WriteChallengeToken(buffer []byte, index *int, token *ChallengeToken) {
 	WriteUint64(buffer, index, token.ExpireTimestamp)
@@ -618,7 +623,7 @@ func WriteChallengeToken(buffer []byte, index *int, token *ChallengeToken) {
 }
 
 func ReadChallengeToken(buffer []byte, index *int, token *ChallengeToken) bool {
-	if len(buffer) - *index < RouteTokenBytes {
+	if len(buffer) - *index < ChallengeTokenBytes {
 		return false
 	}
 	ReadUint64(buffer, index, &token.ExpireTimestamp)
@@ -628,15 +633,18 @@ func ReadChallengeToken(buffer []byte, index *int, token *ChallengeToken) bool {
 	return true
 }
 
-/*
-func WriteEncryptedRouteToken(token *RouteToken, tokenData []byte, senderPrivateKey []byte, receiverPublicKey []byte) {
-	RandomBytes(tokenData[:NonceBytes])
-	WriteRouteToken(token, tokenData[NonceBytes:])
-	Encrypt(senderPrivateKey, receiverPublicKey, tokenData[0:NonceBytes], tokenData[NonceBytes:], NEXT_ROUTE_TOKEN_BYTES)
+func WriteEncryptedChallengeToken(buffer []byte, index *int, token *ChallengeToken, privateKey []byte) {
+	nonce := buffer[*index:*index+NonceBytes_SecretBox]
+	RandomBytes_InPlace(nonce)
+	*index += NonceBytes_SecretBox
+	tokenData := buffer[*index:*index+ChallengeTokenBytes+HMACBytes_SecretBox]
+	WriteChallengeToken(buffer, index, token)
+	Encrypt_SecretBox(privateKey, nonce, tokenData, ChallengeTokenBytes)
 }
 
-func ReadEncryptedRouteToken(token *RouteToken, tokenData []byte, senderPublicKey []byte, receiverPrivateKey []byte) error {
-	if len(tokenData) < NEXT_ENCRYPTED_ROUTE_TOKEN_BYTES {
+/*
+func ReadEncryptedChallengeToken(token *ChallengeToken, tokenData []byte, senderPublicKey []byte, receiverPrivateKey []byte) error {
+	if len(tokenData) < EncryptedChallengeTokenBytes {
 		return fmt.Errorf("not enough bytes for encrypted route token")
 	}
 	nonce := tokenData[0 : C.crypto_box_NONCEBYTES-1]
@@ -644,6 +652,6 @@ func ReadEncryptedRouteToken(token *RouteToken, tokenData []byte, senderPublicKe
 	if err := Decrypt(senderPublicKey, receiverPrivateKey, nonce, tokenData, NEXT_ROUTE_TOKEN_BYTES+C.crypto_box_MACBYTES); err != nil {
 		return err
 	}
-	return ReadRouteToken(token, tokenData)
+	return ReadChallengeToken(token, tokenData)
 }
 */
