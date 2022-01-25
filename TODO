@@ -14,15 +14,43 @@ DONE
 
 	Initially, insert into session map without challenge/response, just to make sure that the idea works
 
+	Server sends challenge packet to client, if no session entry for payload packet.
+
+	Prefix the hack payload packet down from server to have first byte "core.PayloadPacket" (0)
+
+	Check for this on the client, and handle the packet type in the recv, either payload, or challenge...
+
+	Sketch out the flow with challenge and response packets
+
 TODO
 
 	-------------
 
-	Sketch out the flow with challenge and response packets
+	Hack up something super dirty just to get the flow going...
+
+	-------------
+
+	Client should ignore packets that don't come from the gateway address.
+
+	-------------
+
+	Setup the channel for the main thread to process received packets from the goroutine.
+
+	-------------
+
+	Handle payload and challenge packets appropriately when dequeing them from the goroutine.
 
 	-------------
 
 	Implement challenge token and add unit tests for it
+
+	Challenge token should have:
+
+		session id
+		sequence
+		timestamp 
+		client address + port
+		gateway address + port
 
 	-------------
 

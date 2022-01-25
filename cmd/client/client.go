@@ -127,12 +127,27 @@ func mainReturnWithCode() int {
 				}
 
 				if packetBytes <= 0 {
+					fmt.Printf("packet is too small\n")
+					continue
+				}
+
+				if !core.AddressEqual(from, gatewayAddress) {
+					fmt.Printf("packet is not from gateway\n")
 					continue
 				}
 
 				packetData := buffer[:packetBytes]
 
-				fmt.Printf("recv %d byte packet from %s\n", packetBytes, from)
+				switch packetData[0] {
+
+					case core.PayloadPacket:
+						fmt.Printf("recv %d byte payload packet from %s\n", packetBytes, from)
+						break
+
+					case core.ChallengePacket:
+						fmt.Printf("recv %d byte challenge packet from %s\n", packetBytes, from)
+						break
+				}
 
 				// todo: queue packet up on channel for main loop to receive
 				_ = packetData

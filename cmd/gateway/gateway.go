@@ -316,10 +316,15 @@ func mainReturnWithCode() int {
 								}
 							}
 
-							// todo: if there is no session entry, do the challenge/response dance
 							if sessionEntry == nil {
-								sessionEntry = &SessionEntry{}
-								sessionMap_New[sessionId] = sessionEntry
+								// todo: so temporary...
+								challengePacketData := make([]byte, 1)
+								challengePacketData[0] = core.ChallengePacket
+								if _, err := conn.WriteToUDP(challengePacketData, from); err != nil {
+									core.Error("failed to send challenge packet to client: %v", err)
+								}
+								fmt.Printf("send %d byte challenge packet to %s\n", len(challengePacketData), from.String())
+								continue
 							}
 
 							// forward payload packet to server
@@ -337,14 +342,20 @@ func mainReturnWithCode() int {
 							if _, err := conn.WriteToUDP(forwardPacketData, serverAddress); err != nil {
 								core.Error("failed to forward payload to server: %v", err)
 							}
-							fmt.Printf("send %d byte packet to %s\n", payloadBytes, serverAddress.String())
+							fmt.Printf("send %d byte packet to %s\n", forwardPacketBytes, serverAddress.String())
 
 						case core.ChallengeResponsePacket:
 
 							// *** CHALLENGE RESPONSE PACKET ***
 
-							// todo: handle challenge response packet
-					}
+							var sessionId [core.SessionIdBytes]byte
+							for i := 0; i < core.SessionIdBytes; i++ {
+								sessionId[i] = senderPublicKey[i]
+							}
+
+							sessionEntry := &SessionEntry{}
+							sessionMap_New[sessionId] = sessionEntry
+						}
 				}
 
 				wg.Done()
@@ -412,17 +423,22 @@ func mainReturnWithCode() int {
 
 					fmt.Printf("recv internal %d byte packet from %s\n", packetBytes, from.String())
 
-					if packetBytes <= core.VersionBytes + core.AddressBytes {
+					if packetBytes <= core.PacketTypeBytes + core.VersionBytes + core.AddressBytes {
 						fmt.Printf("internal packet is too small\n")
 						continue
 					}
 
 					if packetData[0] != 0 {
-						fmt.Printf("unknown internal packet version\n")
+						fmt.Printf("unknown internal packet type: %d\n", packetData[0])
 						continue
 					}
 
-					index := core.VersionBytes
+					if packetData[1] != 0 {
+						fmt.Printf("unknown internal packet version: %d\n", packetData[1])
+						continue
+					}
+
+					index := core.PacketTypeBytes + core.VersionBytes
 
 					var clientAddress net.UDPAddr
 

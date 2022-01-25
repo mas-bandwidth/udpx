@@ -60,8 +60,9 @@ const AckBytes = 8
 const AckBitsBytes = 32
 const PittleBytes = 2
 const AddressBytes = 19
+const PacketTypeBytes = 1
 const MinPayloadBytes = 1000
-const MinPacketSize = VersionBytes + ChonkleBytes + SessionIdBytes + SequenceBytes + AckBytes + AckBitsBytes + MinPayloadBytes + HMACBytes + PittleBytes
+const MinPacketSize = VersionBytes + ChonkleBytes + SessionIdBytes + SequenceBytes + AckBytes + AckBitsBytes + PacketTypeBytes + MinPayloadBytes + HMACBytes + PittleBytes
 
 const PayloadPacket = byte(0)
 const ChallengePacket = byte(1)
@@ -560,4 +561,8 @@ func SessionIdString(sessionId []byte) string {
 		sessionId[29],
 		sessionId[30],
 		sessionId[31])
+}
+
+func AddressEqual(a *net.UDPAddr, b *net.UDPAddr) bool {
+	return net.IP.Equal(a.IP, b.IP) && a.Port == b.Port
 }
