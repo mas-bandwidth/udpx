@@ -22,15 +22,36 @@ DONE
 
 	Sketch out the flow with challenge and response packets
 
+	Client should ignore packets that don't come from the gateway address.
+
 TODO
 
 	-------------
 
-	Hack up something super dirty just to get the flow going...
+	Hack up something suuuuuuper dirty just to get the challenge/response flow going...
 
 	-------------
+	
 
-	Client should ignore packets that don't come from the gateway address.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 	-------------
 
