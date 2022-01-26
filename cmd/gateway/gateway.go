@@ -289,6 +289,16 @@ func mainReturnWithCode() int {
 						continue
 					}
 
+					// todo: we really want here a concept of "header" and "payload"
+
+					// header is the sequence/ack/ack_bits/packet_type
+
+					// payload is the actual data
+
+					// we actually need to splice the two into the forwarded packet (stripping out the optional challenge token in the middle)
+
+					// --------------------------------
+
 					// decrypt payload
 
 					payloadIndex := core.VersionBytes + core.ChonkleBytes
@@ -298,7 +308,6 @@ func mainReturnWithCode() int {
 					// ignore packet types we don't support
 
 					packetType := payloadData[core.SessionIdBytes+core.SequenceBytes+core.AckBytes+core.AckBitsBytes]
-
 					if packetType != core.PayloadPacket {
 						fmt.Printf("unknown packet type: %d\n", packetType)
 						continue
@@ -309,6 +318,16 @@ func mainReturnWithCode() int {
 					index := 0
 					sequence := uint64(0)
 					core.ReadUint64(sequenceData, &index, &sequence)
+
+					// get challenge token data
+
+					var challengeTokenData []byte
+					hasChallengeToken := payloadData[core.SessionIdBytes+core.SequenceBytes+core.AckBytes+core.AckBitsBytes+core.PacketTypeBytes] == 1
+					if hasChallengeToken {
+						challengeTokenIndex := core.SessionIdBytes + core.SequenceBytes + core.AckBytes + core.AckBitsBytes + core.PacketTypeBytes + 1
+						challengeTokenData = payloadData[challengeTokenIndex:challengeTokenIndex+core.EncryptedChallengeTokenBytes]
+						// todo: adjust the payload data to exclude the challenge token
+					}					
 
 					// process payload packet
 
@@ -328,25 +347,50 @@ func mainReturnWithCode() int {
 
 					if sessionEntry == nil {
 
-						// no session entry. respond with challenge packet
+						// *** no session entry ***
 
-						challengePacketData := make([]byte, 1 + core.EncryptedChallengeTokenBytes + 8)
-						
-						challengeToken := core.ChallengeToken{}
-						challengeToken.ExpireTimestamp = uint64(time.Now().Unix() + ChallengeTokenTimeout)
-						challengeToken.ClientAddress = *from
-						challengeToken.Sequence = sequence
-						
-						index := 0
-						core.WriteUint8(challengePacketData, &index, core.ChallengePacket)
-						core.WriteEncryptedChallengeToken(challengePacketData, &index, &challengeToken, challengePrivateKey)
-						core.WriteUint64(challengePacketData, &index, sequence)
+						if hasChallengeToken {
 
-						if _, err := conn.WriteToUDP(challengePacketData, from); err != nil {
-							core.Error("failed to send challenge packet to client: %v", err)
+							// payload packet has a challenge token (challenge/response)
+
+							// todo: decrypt the challenge token
+							_ = challengeTokenData
+
+							// todo: verify the challenge token
+
+							// punch through
+
+							var sessionId [core.SessionIdBytes]byte
+							for i := 0; i < core.SessionIdBytes; i++ {
+								sessionId[i] = senderPublicKey[i]
+							}
+
+							sessionEntry := &SessionEntry{}
+							sessionMap_New[sessionId] = sessionEntry
+
+						} else {
+
+							// respond with a challenge token
+
+							challengePacketData := make([]byte, 1 + core.EncryptedChallengeTokenBytes + 8)
+							
+							challengeToken := core.ChallengeToken{}
+							challengeToken.ExpireTimestamp = uint64(time.Now().Unix() + ChallengeTokenTimeout)
+							challengeToken.ClientAddress = *from
+							challengeToken.Sequence = sequence
+							
+							index := 0
+							core.WriteUint8(challengePacketData, &index, core.ChallengePacket)
+							core.WriteEncryptedChallengeToken(challengePacketData, &index, &challengeToken, challengePrivateKey)
+							core.WriteUint64(challengePacketData, &index, sequence)
+
+							if _, err := conn.WriteToUDP(challengePacketData, from); err != nil {
+								core.Error("failed to send challenge packet to client: %v", err)
+							}
+							
+							fmt.Printf("send %d byte challenge packet to %s\n", len(challengePacketData), from.String())
+
 						}
-						
-						fmt.Printf("send %d byte challenge packet to %s\n", len(challengePacketData), from.String())
 						
 						continue
 					}
@@ -371,19 +415,6 @@ func mainReturnWithCode() int {
 						core.Error("failed to forward payload to server: %v", err)
 					}
 					fmt.Printf("send %d byte packet to %s\n", forwardPacketBytes, serverAddress.String())
-
-					// todo: challenge response will be included inside payload packets
-					/*
-						// *** CHALLENGE RESPONSE PACKET ***
-
-						var sessionId [core.SessionIdBytes]byte
-						for i := 0; i < core.SessionIdBytes; i++ {
-							sessionId[i] = senderPublicKey[i]
-						}
-
-						sessionEntry := &SessionEntry{}
-						sessionMap_New[sessionId] = sessionEntry
-					*/
 				}
 
 				wg.Done()

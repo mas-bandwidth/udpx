@@ -181,12 +181,19 @@ func mainReturnWithCode() int {
 
 					packetType := packetData[0]
 
+					// todo: decryption and signature check must pass
+
+					// todo: sequence must not be too old
+
 					switch packetType {
 
 					case core.PayloadPacket:
+
 						fmt.Printf("received %d byte payload packet from gateway\n", len(packetData))
+
+						hasChallengeToken = false
+
 						// todo: process payload packet
-						// todo: if the payload packet sequence is greater than the challenge token sequence, clear the challenge token
 
 					case core.ChallengePacket:
 						
@@ -239,6 +246,12 @@ func mainReturnWithCode() int {
 			core.WriteUint64(packetData, &index, ack)
 			core.WriteBytes(packetData, &index, ack_bits[:], len(ack_bits))
 			core.WriteUint8(packetData, &index, core.PayloadPacket)
+			if hasChallengeToken {
+				core.WriteUint8(packetData, &index, 1)
+				core.WriteBytes(packetData, &index, challengeTokenData[:], core.EncryptedChallengeTokenBytes)
+			} else {
+				core.WriteUint8(packetData, &index, 0)
+			}
 			core.WriteBytes(packetData, &index, payload[:], core.MinPayloadBytes)
 			encryptFinish := index
 			index += core.HMACBytes_Box

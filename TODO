@@ -22,36 +22,36 @@ DONE
 
 	If the client has no challenge token stored, OR, the challenge token has higher sequence number that the current challenge, the client stores the challenge token + sequence number as current.
 
-TODO
-
-	-------------
-
 	When the client sends a payload packet to the gateway, if a challenge token exists, include it in the packet
 
 	If no challenge token exists on the client, write a zero byte "no challenge token" at a point in the payload packet.
-
-	-------------
 
 	Update the gateway to look for the challenge token in the payload packet
 
 	If no session entry exists, but the challenge token exists, add the session map entry and pass the payload packet through to the server.
 
-	-------------
-
-	When the client receives a payload packet back from the server that decrypts, clear the challenge token.
-
-	-------------
-
 	Verify the client punches through challenge/response and gets payload packets in return.
-
-	-------------
 
 	Verify the client stops sending challenge responses once it punches through.
 
+	When the client receives a payload packet back from the server clear the challenge token.
+
+TODO
+
 	-------------
 
-	Need to standardize packets sent from gateway -> client to have the same header, chonkle, pittle and encryption.
+	Actually decrypt and verify the challenge token
 
-	We can't have spoofing of gateway -> client packets...
+	-------------
+
+	Cleanly strip out the challenge token before forwarding the payload to the server.
+
+	-------------
+
+	Validate the payload on the server, to make sure it's not subtly fucked up.
+
+	-------------
+
+	Standardize packets sent from gateway -> client to have the same packet structure as client -> gateway packets.
 
 	-------------
