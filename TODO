@@ -10,24 +10,38 @@ DONE
 
 	Implement test for read/write challenge token
 
+	Implement read encrypted challenge token
+
+	Implement tests for read/write encrypted challenge token
+
 TODO
 
 	-------------
 
-	Implement read encrypted challenge token
+	Include an encrypted challenge token in the challenge packet, followed by the sequence number of the challenge token.
 
 	-------------
 
-	Implement tests for read/write encrypted challenge token
+	Client reads the challenge token in the challenge packet when received, and the sequence number of the challenge.
+
+	If the client has no challenge token stored, OR, the challenge token has higher sequence number that the current challenge, the client should store the challenge token + sequence number as current.
 
 	-------------
 
-	Hook up the challenge token in the challenge/response protocol.
+	When the client sends a payload packet to the gateway, if a challenge token exists, include it in the packet
 
-	This means including it in the challenge packet, and including the challenge token (encrypted) in the payload packet when it is set on the client.
+	If no challenge token exists on the client, write a zero byte "no challenge token" at a point in the payload packet.
 
-	Once the client receives a payload packet from the server, with sequence > than the challenge seqeuence **IMPORTANT***
+	-------------
 
-	Then the client may clear the challenge token.
+	When the client receives a payload packet back from the server, with ack >= challenge token sequence, the client clears the challenge token.
+
+	-------------
+
+	Verify the client punches through challenge/response and gets payload packets in return.
+
+	-------------
+
+	Verify the client stops sending challenge responses once it punches through.
 
 	-------------
