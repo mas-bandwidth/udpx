@@ -56,6 +56,7 @@ import (
 
 const MaxPacketSize = 1500
 const SessionMapSwapTime = 60
+const ChallengeTokenTimeout = 1
 
 type SessionEntry struct {
 	sequence uint64
@@ -114,6 +115,8 @@ func mainReturnWithCode() int {
 	}
 
 	udpPort := envvar.Get("UDP_PORT", "40000")
+
+	challengePrivateKey := core.Keygen_SecretBox()
 
 	ctx, ctxCancelFunc := context.WithCancel(context.Background())
 
@@ -301,6 +304,12 @@ func mainReturnWithCode() int {
 						continue
 					}
 
+					// get packet sequence number
+
+					index := 0
+					sequence := uint64(0)
+					core.ReadUint64(sequenceData, &index, &sequence)
+
 					// process payload packet
 
 					var sessionId [core.SessionIdBytes]byte
@@ -318,20 +327,39 @@ func mainReturnWithCode() int {
 					}
 
 					if sessionEntry == nil {
-						challengePacketData := make([]byte, 1)
-						challengePacketData[0] = core.ChallengePacket
+
+						// no session entry. respond with challenge packet
+
+						challengePacketData := make([]byte, 1 + core.EncryptedChallengeTokenBytes + 8)
+						
+						challengeToken := core.ChallengeToken{}
+						challengeToken.ExpireTimestamp = uint64(time.Now().Unix() + ChallengeTokenTimeout)
+						challengeToken.ClientAddress = *from
+						challengeToken.Sequence = sequence
+						
+						index := 0
+						core.WriteUint8(challengePacketData, &index, core.ChallengePacket)
+						core.WriteEncryptedChallengeToken(challengePacketData, &index, &challengeToken, challengePrivateKey)
+						core.WriteUint64(challengePacketData, &index, sequence)
+
 						if _, err := conn.WriteToUDP(challengePacketData, from); err != nil {
 							core.Error("failed to send challenge packet to client: %v", err)
 						}
+						
 						fmt.Printf("send %d byte challenge packet to %s\n", len(challengePacketData), from.String())
+						
 						continue
 					}
+
+					// ignore really old packets
+
+					// todo: any packet older than most recent sequence - 100 = drop
 
 					// forward payload packet to server
 
 					forwardPacketData := make([]byte, MaxPacketSize)
 
-					index := 0
+					index = 0
 					core.WriteAddress(forwardPacketData, &index, gatewayInternalAddress)
 					core.WriteAddress(forwardPacketData, &index, from)
 					core.WriteBytes(forwardPacketData, &index, payloadData, payloadBytes) // todo: obvs this should be zero copy

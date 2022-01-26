@@ -14,11 +14,11 @@ DONE
 
 	Implement tests for read/write encrypted challenge token
 
+	Include an encrypted challenge token in the challenge packet
+
+	Write the challenge sequence number after the challenge token, since the client needs this too
+
 TODO
-
-	-------------
-
-	Include an encrypted challenge token in the challenge packet, followed by the sequence number of the challenge token.
 
 	-------------
 
@@ -43,5 +43,11 @@ TODO
 	-------------
 
 	Verify the client stops sending challenge responses once it punches through.
+
+	-------------
+
+	Need to standardize packets sent from gateway -> client to have the same header, chonkle, pittle and encryption.
+
+	We can't have spoofing of challenge responses coming back from attackers...
 
 	-------------
