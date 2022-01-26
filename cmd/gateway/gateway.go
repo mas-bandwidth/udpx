@@ -1,7 +1,7 @@
 /*
-   Copyright (c) 2022, Network Next, Inc. All rights reserved.
+	Copyright (c) 2022, Network Next, Inc. All rights reserved.
 
-   This is open source software licensed under the BSD 3-Clause License.
+	This is open source software licensed under the BSD 3-Clause License.
 
 	Redistribution and use in source and binary forms, with or without
 	modification, are permitted provided that the following conditions are met:
@@ -353,10 +353,23 @@ func mainReturnWithCode() int {
 
 							// payload packet has a challenge token (challenge/response)
 
-							// todo: decrypt the challenge token
-							_ = challengeTokenData
+							index := 0
+							var challengeToken core.ChallengeToken
+							result := core.ReadEncryptedChallengeToken(challengeTokenData, &index, &challengeToken, challengePrivateKey)
+							if !result {
+								fmt.Printf("challenge token did not decrypt\n")
+								continue
+							}
 
-							// todo: verify the challenge token
+							if challengeToken.ExpireTimestamp <= uint64(time.Now().Unix()) {
+								fmt.Printf("challenge token expired\n")
+								continue
+							}
+
+							if !core.AddressEqual(&challengeToken.ClientAddress, from) {
+								fmt.Printf("challenge token client address mismatch\n")
+								continue
+							}
 
 							// punch through
 
@@ -365,12 +378,12 @@ func mainReturnWithCode() int {
 								sessionId[i] = senderPublicKey[i]
 							}
 
-							sessionEntry := &SessionEntry{}
+							sessionEntry := &SessionEntry{sequence: challengeToken.Sequence}
 							sessionMap_New[sessionId] = sessionEntry
 
 						} else {
 
-							// respond with a challenge token
+							// respond with a challenge
 
 							challengePacketData := make([]byte, 1 + core.EncryptedChallengeTokenBytes + 8)
 							

@@ -1,7 +1,7 @@
 /*
-   Copyright (c) 2022, Network Next, Inc. All rights reserved.
+	Copyright (c) 2022, Network Next, Inc. All rights reserved.
 
-   This is open source software licensed under the BSD 3-Clause License.
+	This is open source software licensed under the BSD 3-Clause License.
 
 	Redistribution and use in source and binary forms, with or without
 	modification, are permitted provided that the following conditions are met:
@@ -193,6 +193,8 @@ func mainReturnWithCode() int {
 				index = 0
 
 				version := byte(0)
+
+				// todo: needs to have same structure, eg. sequence, ack, ack_bits, packet_type=payload packet, (payload data)
 
 				core.WriteUint8(responsePacketData, &index, core.PayloadPacket)
 				core.WriteUint8(responsePacketData, &index, version)
