@@ -14,8 +14,6 @@ DONE
 
 	Update the receive sequence when a packet is received.
 
-TODO
-
 	-------------
 
 	We can't encrypt the packet that sends down the challenge response, since no session is established, we don't have send sequence numbers, and trying to fake this will break crypto by using the same nonce more than once.
@@ -25,6 +23,68 @@ TODO
 	This may mean that we need to put the packet type as the first byte, instead of putting it after the seq/ack/ack_bits
 
 	Need to think this through. Not sure what is best here yet...
+
+	-------------
+
+	What's clear is that at minimum, the challenge packet needs to have a different format to the payload packet.
+
+	The challenge packet needs to be signed, or encrypted and signed, but in such a way that it doesn't depend on sequence numbers.
+
+	The token itself is already encrypted, does it matter if another customer can take that token and try to reply with it? The token is specific to the address and session, and only that client knows the private key.
+
+	-------------
+
+	But what if somebody spoofs the server, and sends a challenge packet down to the client.
+
+	The client will take the challenge, and include it in payload packets.
+
+	The server will ignore it, however this makes it possible for an attacker to "stuff" a high sequence challenge, and block the ability of a client to migrate to another gateway or IP address.
+
+	Therefore, I conclude that the challenge packet must be signed by the private key of the gateway, and verifiable using only the public key of the gateway.
+
+	The public signed data also needs to include the sequence and the session id, so the client can verify that the challenge token corresponds to them, and that the challenge sequence isn't tampered with.
+
+	-------------
+
+	But if we sign the packet, then the gateway needs an additional private/public keypair just for signing, and this is undesirable.
+
+	We could instead continue to encrypt the packet, but take advantage of the 24 byte nonce.
+
+	For packet sequence numbers, we are only using the low 8 bytes of the nonce.
+
+	By expanding to use the upper 16 bytes of the nonce, and setting the 63rd bit (top of uint64) to be true for the challenge token, then we can ensure that we have enough randomness (we only lose one bit), at the cost of reducing our sequence numbers effectively from 64bit to 63 bit.
+
+	I find this frustrating because I'll have to write a spec, and this seems like a weird decision.
+
+	Is there a better option?
+
+	--------------
+
+TODO
+
+	No matter what is done, we need to move the packet type to the front of the packet for gateway -> client packets.
+
+	===========================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 	-------------
 

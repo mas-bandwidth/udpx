@@ -70,7 +70,7 @@ const PrivateKeyBytes_SecretBox = 32
 const NonceBytes_SecretBox = 24
 const HMACBytes_SecretBox = 16
 
-const PrefixBytes = VersionBytes + ChonkleBytes
+const PrefixBytes = PacketTypeBytes + ChonkleBytes
 const HeaderBytes = SessionIdBytes + SequenceBytes + AckBytes + AckBitsBytes + PacketTypeBytes
 const PostfixBytes = HMACBytes_Box + PittleBytes
 const MinChallengeBytes = 1
@@ -485,7 +485,7 @@ func GenerateChonkle(output []byte, magic []byte, fromAddressData []byte, fromPo
 
 func BasicPacketFilter(packetData []byte, packetLength int) bool {
 
-	data := packetData[1:]
+	data := packetData[2:]
 
 	if data[0] < 0x2A || data[0] > 0x2D {
 		return false
@@ -551,7 +551,7 @@ func AdvancedPacketFilter(data []byte, magic []byte, fromAddress []byte, fromPor
 	var b [2]byte
 	GenerateChonkle(a[:], magic, fromAddress, fromPort, toAddress, toPort, packetLength)
 	GeneratePittle(b[:], fromAddress, fromPort, toAddress, toPort, packetLength)
-	if bytes.Compare(a[0:15], data[1:16]) != 0 {
+	if bytes.Compare(a[0:15], data[2:17]) != 0 {
 		return false
 	}
 	if bytes.Compare(b[0:2], data[packetLength-2:packetLength]) != 0 {

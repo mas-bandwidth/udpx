@@ -239,6 +239,7 @@ func mainReturnWithCode() int {
 			index := 0
 
 			core.WriteUint8(packetData, &index, version)
+			core.WriteUint8(packetData, &index, core.PayloadPacket)
 			chonkle := packetData[index : index+core.ChonkleBytes]
 			index += core.ChonkleBytes
 			core.WriteBytes(packetData, &index, sessionId, core.SessionIdBytes)
