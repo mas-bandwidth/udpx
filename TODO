@@ -1,56 +1,81 @@
 DONE
 
-	Implement secret box primitives and write tests for them
+	Server needs a session entry structure.
 
-	Sketch out challenge token contents
+	Same new/old swap as before.
 
-	Implement read/write challenge token
+	Store the *server* send sequence in the session id.
 
-	Implement write encrypted challenge token
+	*** exposure. if somebody reconnects as the same session but to a different gateway, and punches through again, the server may reset to zero sequence initially, which would expose nonce, therefore the session should carry along with it the most recently received sequence from the server, so a new entry can start there, and add like 100,000 to it.... ***
 
-	Implement test for read/write challenge token
+	^--- this will naturally fall from the "ack" bit sent up from the client
 
-	Implement read encrypted challenge token
+	Store the send and receive sequence in the server session map entry when it's created.
 
-	Implement tests for read/write encrypted challenge token
-
-	Include an encrypted challenge token in the challenge packet
-
-	Write the challenge sequence number after the challenge token, since the client needs this too
-
-	Client reads the challenge token in the challenge packet when received, and the sequence number of the challenge.
-
-	If the client has no challenge token stored, OR, the challenge token has higher sequence number that the current challenge, the client stores the challenge token + sequence number as current.
-
-	When the client sends a payload packet to the gateway, if a challenge token exists, include it in the packet
-
-	If no challenge token exists on the client, write a zero byte "no challenge token" at a point in the payload packet.
-
-	Update the gateway to look for the challenge token in the payload packet
-
-	If no session entry exists, but the challenge token exists, add the session map entry and pass the payload packet through to the server.
-
-	Verify the client punches through challenge/response and gets payload packets in return.
-
-	Verify the client stops sending challenge responses once it punches through.
-
-	When the client receives a payload packet back from the server clear the challenge token.
-
-	Actually decrypt and verify the challenge token
+	Update the receive sequence when a packet is received.
 
 TODO
 
 	-------------
 
-	Cleanly strip out the challenge token before forwarding the payload to the server.
+	We can't encrypt the packet that sends down the challenge response, since no session is established, we don't have send sequence numbers, and trying to fake this will break crypto by using the same nonce more than once.
+
+	It seems that at best we can sign the challenge response packet.
+
+	This may mean that we need to put the packet type as the first byte, instead of putting it after the seq/ack/ack_bits
+
+	Need to think this through. Not sure what is best here yet...
 
 	-------------
 
-	Validate the payload on the server, to make sure it's not subtly fucked up.
+	Server writes the same session id, sequence, ack, ack_bits, packet type header, but with the difference that we prefix the version and client address...
+
+	eg. 
+
+	[version][client address](standard header)(payload)
+
+	This can be sent down to the gateway.
 
 	-------------
 
-	Standardize packets sent from gateway -> client to have the same packet structure as client -> gateway packets.
+	Extend the gateway to encrypt packet sent down to the client....
+
+	Gateway encrypts payload packets.
+
+	Gateway encrypts challenge packets.
 
 	-------------
-¡
+
+	Extend the client to decrypt the packets received from the gateway....
+
+	Client decrypts payload packets.
+
+	Client decrypts challenge packets.
+
+	-------------
+
+	Extend the client to ignore old packets by sequence.
+
+	-------------
+
+	Port across relay protection from reliable.io and test it.
+
+	Extend the gateway to fully stop replay attacks via replay protection bitfield.
+
+	-------------
+
+	Port the reliability layer from reliable.io into golang and test it.
+
+	-------------
+
+	Hook up the reliability layer on the server-side.
+
+	-------------
+
+	Hook up the reliability layer on the client-side.
+
+	-------------
+
+	At this point we should have a functioning reliability layer between the client and server.
+
+	-------------

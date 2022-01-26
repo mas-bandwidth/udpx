@@ -70,8 +70,12 @@ const PrivateKeyBytes_SecretBox = 32
 const NonceBytes_SecretBox = 24
 const HMACBytes_SecretBox = 16
 
+const PrefixBytes = VersionBytes + ChonkleBytes
+const HeaderBytes = SessionIdBytes + SequenceBytes + AckBytes + AckBitsBytes + PacketTypeBytes
+const PostfixBytes = HMACBytes_Box + PittleBytes
+const MinChallengeBytes = 1
 const MinPayloadBytes = 1000
-const MinPacketSize = VersionBytes + ChonkleBytes + SessionIdBytes + SequenceBytes + AckBytes + AckBitsBytes + PacketTypeBytes + MinPayloadBytes + HMACBytes_Box + PittleBytes
+const MinPacketSize = PrefixBytes + HeaderBytes + MinChallengeBytes + MinPayloadBytes + PostfixBytes
 
 func Keygen_Box() ([]byte, []byte) {
 	var publicKey [PublicKeyBytes_Box]byte

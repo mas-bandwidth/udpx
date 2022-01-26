@@ -97,6 +97,7 @@ func mainReturnWithCode() int {
 	hasChallengeToken := false
 	challengeTokenData := [core.EncryptedChallengeTokenBytes]byte{}
 	challengeTokenSequence := uint64(0)
+	challengeTokenExpireTimestamp := uint64(0)
 
 	sequence := uint64(0)
 	ack := uint64(0)
@@ -215,6 +216,7 @@ func mainReturnWithCode() int {
 							hasChallengeToken = true
 							copy(challengeTokenData[:], packetChallengeTokenData)
 							challengeTokenSequence = packetChallengeSequence
+							challengeTokenExpireTimestamp = uint64(time.Now().Unix()) + 2
 						}
 					}
 
@@ -296,6 +298,15 @@ func mainReturnWithCode() int {
 			}
 
 			fmt.Printf("sent %d byte packet to %s\n", len(packetData), gatewayAddress)
+
+			// time out the challenge token if it's too old
+
+			if hasChallengeToken && challengeTokenExpireTimestamp <= uint64(time.Now().Unix()) {
+				fmt.Printf("*** timed out challenge token ***\n")
+				hasChallengeToken = false
+			}
+
+			// sleep till next frame
 
 			time.Sleep(100 * time.Millisecond)
 

@@ -56,7 +56,8 @@ import (
 
 const MaxPacketSize = 1500
 const SessionMapSwapTime = 60
-const ChallengeTokenTimeout = 1
+const ChallengeTokenTimeout = 10
+const OldSequenceThreshold = 100
 
 type SessionEntry struct {
 	sequence uint64
@@ -268,7 +269,7 @@ func mainReturnWithCode() int {
 						continue
 					}
 
-					// decrypt
+					// decrypt packet
 
 					publicKeyIndex := core.VersionBytes + core.ChonkleBytes
 					sequenceIndex := core.VersionBytes + core.ChonkleBytes + core.SessionIdBytes
@@ -283,8 +284,6 @@ func mainReturnWithCode() int {
 						nonce[i] = sequenceData[i]
 					}
 
-					// decrypt packet
-
 					err = core.Decrypt_Box(senderPublicKey, gatewayPrivateKey, nonce, encryptedData, len(encryptedData))
 					if err != nil {
 						fmt.Printf("decryption failed\n")
@@ -293,24 +292,24 @@ func mainReturnWithCode() int {
 
 					// split decrypted packet into various pieces
 
-					const HeaderBytes = core.SessionIdBytes + core.SequenceBytes + core.AckBytes + core.AckBitsBytes + core.PacketTypeBytes
-
-					headerIndex := core.VersionBytes + core.ChonkleBytes
+					headerIndex := core.PrefixBytes
 					
-					challengeIndex := headerIndex + HeaderBytes
+					challengeIndex := headerIndex + core.HeaderBytes
 					challengeBytes := 1
 					if packetData[challengeIndex] == 1 {
 						challengeBytes += core.EncryptedChallengeTokenBytes
 					}
 
 					payloadIndex := challengeIndex + challengeBytes
-					payloadBytes := packetBytes - core.PittleBytes - core.HMACBytes_Box
+					payloadBytes := packetBytes - payloadIndex - core.PostfixBytes
 
-					header := packetData[headerIndex:headerIndex+HeaderBytes]
+					header := packetData[headerIndex:headerIndex+core.HeaderBytes]
 
 					challenge := packetData[challengeIndex:challengeIndex+challengeBytes]
 					
 					payload := packetData[payloadIndex:payloadIndex+payloadBytes]
+
+					fmt.Printf("payload is %d bytes\n", len(payload))
 
 					// ignore packet types we don't support
 
@@ -413,9 +412,18 @@ func mainReturnWithCode() int {
 						continue
 					}
 
-					// ignore really old packets
+					// drop packets that are too old
 
-					// todo: any packet older than most recent sequence - 100 = drop
+					oldSequence := uint64(0)
+
+					if sessionEntry.sequence > OldSequenceThreshold {
+						oldSequence = sessionEntry.sequence - OldSequenceThreshold
+					}
+
+					if sequence < oldSequence {
+						fmt.Printf("sequence number is too old: %d\n", sequence)
+						continue
+					}
 
 					// forward payload packet to server
 
@@ -424,7 +432,7 @@ func mainReturnWithCode() int {
 					index = 0
 					core.WriteAddress(forwardPacketData, &index, gatewayInternalAddress)
 					core.WriteAddress(forwardPacketData, &index, from)
-					core.WriteBytes(forwardPacketData, &index, header, HeaderBytes)
+					core.WriteBytes(forwardPacketData, &index, header, core.HeaderBytes)
 					core.WriteBytes(forwardPacketData, &index, payload, len(payload))
 
 					forwardPacketBytes := index
@@ -507,20 +515,49 @@ func mainReturnWithCode() int {
 					}
 
 					if packetData[0] != 0 {
-						fmt.Printf("unknown internal packet type: %d\n", packetData[0])
+						fmt.Printf("unknown internal packet version: %d\n", packetData[0])
 						continue
 					}
 
-					if packetData[1] != 0 {
-						fmt.Printf("unknown internal packet version: %d\n", packetData[1])
-						continue
-					}
+					// read the client address the packet should be forwarded to
 
-					index := core.PacketTypeBytes + core.VersionBytes
-
+					index := 0
 					var clientAddress net.UDPAddr
-
 					core.ReadAddress(packetData, &index, &clientAddress)
+
+					// split the packet apart into sections
+
+					headerIndex := core.VersionBytes + core.AddressBytes
+
+					payloadIndex := headerIndex + core.HeaderBytes
+					payloadBytes := len(packetData) - payloadIndex
+
+					header := packetData[headerIndex:headerIndex+core.HeaderBytes]
+					payload := packetData[payloadIndex:payloadIndex+payloadBytes]
+
+					// sketch out the packet to send to the client
+
+					forwardPacketData := make([]byte, MaxPacketSize)
+
+					index = 0
+
+					core.WriteUint(forwardPacketData, &index, core.PayloadPacket)
+					core.WriteBytes(forwardPacketData, &index, payload, payloadBytes)
+
+					// todo: construct the packet to send to the client (add prefix and postfixes as well)
+
+					forwardPacketBytes = index
+					forwardPacketData = forwardPacketData[:forwardPacketBytes]
+
+					// todo: encrypt the packet to send to the client
+
+					// ...
+
+					// todo: send the packet to the client
+
+					_ = forwardPacketData
+
+					/*
 
 					packetData = packetData[index:]
 					packetBytes = len(packetData)
@@ -529,6 +566,7 @@ func mainReturnWithCode() int {
 						core.Error("failed to forward packet to client: %v", err)
 					}
 					fmt.Printf("send %d byte packet to %s\n", packetBytes, clientAddress.String())
+					*/
 				}
 
 				wg.Done()

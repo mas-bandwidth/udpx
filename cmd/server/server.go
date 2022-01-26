@@ -41,6 +41,7 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/networknext/udpx/modules/core"
 	"github.com/networknext/udpx/modules/envvar"
@@ -50,6 +51,12 @@ import (
 )
 
 const MaxPacketSize = 1500
+const SessionMapSwapTime = 60
+
+type SessionEntry struct {
+	RecvSequence uint64
+	SendSequence uint64
+}
 
 // Allows us to return an exit code and allows log flushes and deferred functions
 // to finish before exiting.
@@ -152,12 +159,29 @@ func mainReturnWithCode() int {
 
 			buffer := [MaxPacketSize]byte{}
 
+			sessionMap_Old := make(map[[core.SessionIdBytes]byte]*SessionEntry)
+			sessionMap_New := make(map[[core.SessionIdBytes]byte]*SessionEntry)
+
+			swapTime := time.Now().Unix() + SessionMapSwapTime
+			swapCount := 0
+
 			for {
 
 				packetBytes, _, err := conn.ReadFromUDP(buffer[:])
 				if err != nil {
 					core.Error("failed to read udp packet: %v", err)
 					break
+				}
+
+				swapCount++
+				if swapCount > 100 {
+					currentTime := time.Now().Unix()
+					if currentTime >= swapTime {
+						swapCount = 0
+						swapTime = currentTime + SessionMapSwapTime
+						sessionMap_Old = sessionMap_New
+						sessionMap_New = make(map[[core.SessionIdBytes]byte]*SessionEntry)
+					}
 				}
 
 				if packetBytes <= 0 {
@@ -174,6 +198,7 @@ func mainReturnWithCode() int {
 				var sequence uint64
 				var ack uint64
 				var ack_bits [core.AckBitsBytes]byte
+				var packetType byte
 
 				core.ReadAddress(packetData, &index, &gatewayInternalAddress)
 				core.ReadAddress(packetData, &index, &clientAddress)
@@ -181,8 +206,51 @@ func mainReturnWithCode() int {
 				core.ReadUint64(packetData, &index, &sequence)
 				core.ReadUint64(packetData, &index, &ack)
 				core.ReadBytes(packetData, &index, ack_bits[:], core.AckBitsBytes)
+				core.ReadUint8(packetData, &index, &packetType)
 
-				fmt.Printf("received packet %d from %s\n", sequence, core.SessionIdString(sessionId[:]))
+				if packetType != core.PayloadPacket {
+					fmt.Printf("unknown packet type: %d\n", packetType)
+				}
+
+				sessionEntry := sessionMap_New[sessionId]
+				if sessionEntry == nil {
+					sessionEntry = sessionMap_Old[sessionId]
+					if sessionEntry == nil {
+						// add new session entry
+						sessionEntry = &SessionEntry{SendSequence: ack+10000, RecvSequence: sequence}
+						sessionMap_New[sessionId] = sessionEntry
+						fmt.Printf("new session %s from %s\n", core.SessionIdString(sessionId[:]), clientAddress.String())
+					} else {
+						// migrate old -> new session map
+						sessionMap_New[sessionId] = sessionEntry
+					}
+				}
+
+				if sessionEntry == nil {
+					// this should never happen
+					fmt.Printf("no session entry\n")
+					continue
+				}
+
+				if sessionEntry.RecvSequence < sequence {
+					sessionEntry.RecvSequence = sequence
+				}
+
+				payload := packetData[index:]
+
+				fmt.Printf("received packet %d from %s with %d byte payload\n", sequence, core.SessionIdString(sessionId[:]), len(payload))
+
+				if len(payload) != core.MinPayloadBytes {
+					fmt.Printf("payload size mismatch. expected %d, got %d\n", core.MinPayloadBytes, len(payload))
+					continue
+				}
+
+				for i := 0; i < core.MinPayloadBytes; i++ {
+					if payload[i] != byte(i) {
+						fmt.Printf("payload data mismatch at index %d. expected %d, got %d\n", i, byte(i), payload[i])
+						continue
+					}
+				}
 
 				// temporary: dummy response to test server -> gateway -> client packet delivery
 
@@ -194,11 +262,19 @@ func mainReturnWithCode() int {
 
 				version := byte(0)
 
-				// todo: needs to have same structure, eg. sequence, ack, ack_bits, packet_type=payload packet, (payload data)
+				send_sequence := sessionEntry.SendSequence
+				send_ack := sessionEntry.RecvSequence
+				var send_ack_bits [core.AckBitsBytes]byte
 
-				core.WriteUint8(responsePacketData, &index, core.PayloadPacket)
+				sessionEntry.SendSequence++
+
 				core.WriteUint8(responsePacketData, &index, version)
 				core.WriteAddress(responsePacketData, &index, &clientAddress)
+				core.WriteBytes(packetData, &index, sessionId[:], core.SessionIdBytes)
+				core.WriteUint64(packetData, &index, send_sequence)
+				core.WriteUint64(packetData, &index, send_ack)
+				core.WriteBytes(packetData, &index, send_ack_bits[:], len(send_ack_bits))
+				core.WriteUint8(packetData, &index, core.PayloadPacket)
 				core.WriteBytes(responsePacketData, &index, dummyPayload, len(dummyPayload))
 
 				responsePacketBytes := index
