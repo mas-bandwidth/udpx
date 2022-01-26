@@ -203,8 +203,6 @@ func mainReturnWithCode() int {
 						index := 1 + core.EncryptedChallengeTokenBytes
 						core.ReadUint64(packetData, &index, &packetChallengeSequence)
 						
-						fmt.Printf("packet challenge sequence is %d\n", packetChallengeSequence)
-
 						if !hasChallengeToken || challengeTokenSequence < packetChallengeSequence {
 							fmt.Printf("*** updated challenge token: %d ***\n", packetChallengeSequence)
 							hasChallengeToken = true
