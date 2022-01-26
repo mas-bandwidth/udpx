@@ -328,19 +328,15 @@ func TestChallengeToken(t *testing.T) {
 	assert.True(t, result)
 	assert.Equal(t, challengeToken, readChallengeToken)
 
-	/*
-	// can't read an encrypted route token if the buffer is too small
+	// can't read an encrypted challenge token if the buffer is too small
 
-	err = ReadEncryptedChallengeToken(&readChallengeToken, buffer[:10], masterPublicKey[:], relayPrivateKey[:])
+	index = 0
+	result = ReadEncryptedChallengeToken(buffer[:5], &index, &readChallengeToken, privateKey)
+	assert.False(t, result)
 
-	assert.Error(t, err)
+	// can't read an encrypted challenge token if the buffer is garbage
 
-	// can't read an encrypted route token if the buffer is garbage
-
-	buffer = make([]byte, NEXT_ENCRYPTED_ROUTE_TOKEN_BYTES)
-
-	err = ReadEncryptedRouteToken(&readRouteToken, buffer, masterPublicKey[:], relayPrivateKey[:])
-
-	assert.Error(t, err)
-	*/
+	buffer = make([]byte, EncryptedChallengeTokenBytes)
+	result = ReadEncryptedChallengeToken(buffer, &index, &readChallengeToken, privateKey)
+	assert.False(t, result)
 }

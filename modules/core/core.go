@@ -641,6 +641,9 @@ func WriteEncryptedChallengeToken(buffer []byte, index *int, token *ChallengeTok
 }
 
 func ReadEncryptedChallengeToken(buffer []byte, index *int, token *ChallengeToken, privateKey []byte) bool {
+	if len(buffer) - *index < EncryptedChallengeTokenBytes {
+		return false
+	}
 	nonce := buffer[*index:*index+NonceBytes_SecretBox]
 	*index += NonceBytes_SecretBox
 	tokenData := buffer[*index:*index+ChallengeTokenBytes+HMACBytes_SecretBox]
