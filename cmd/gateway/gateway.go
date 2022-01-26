@@ -295,7 +295,7 @@ func mainReturnWithCode() int {
 					payloadData := packetData[payloadIndex : packetBytes-core.PittleBytes-core.HMACBytes_Box]
 					payloadBytes := len(payloadData)
 
-					// ignore packet types we don't know how to process
+					// ignore packet types we don't support
 
 					packetType := payloadData[core.SessionIdBytes+core.SequenceBytes+core.AckBytes+core.AckBitsBytes]
 
@@ -321,7 +321,7 @@ func mainReturnWithCode() int {
 					if sessionEntry == nil {
 						sessionEntry = sessionMap_Old[sessionId]
 						if sessionEntry != nil {
-							// migrate old -> new
+							// migrate old -> new session map
 							sessionMap_New[sessionId] = sessionEntry
 						}
 					}

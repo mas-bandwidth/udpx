@@ -84,15 +84,25 @@ func mainReturnWithCode() int {
 		return 1
 	}
 
-	clientPublicKey, clientPrivateKey := core.Keygen_Box()
-
-	sessionId := clientPublicKey
-
 	gatewayPublicKey, err := envvar.GetBase64("GATEWAY_PUBLIC_KEY", nil)
 	if err != nil || len(gatewayPublicKey) != core.PublicKeyBytes_Box {
 		core.Error("missing or invalid GATEWAY_PUBLIC_KEY: %v\n", err)
 		return 1
 	}
+
+	clientPublicKey, clientPrivateKey := core.Keygen_Box()
+
+	sessionId := clientPublicKey
+
+	hasChallengeToken := false
+	challengeTokenData := [core.EncryptedChallengeTokenBytes]byte{}
+	challengeTokenSequence := uint64(0)
+
+	sequence := uint64(0)
+	ack := uint64(0)
+	ack_bits := [32]byte{}
+
+    // create client socket
 
 	lc := net.ListenConfig{}
 
@@ -160,10 +170,6 @@ func mainReturnWithCode() int {
 
 		_ = clientPrivateKey
 
-		sequence := uint64(0)
-		ack := uint64(0)
-		ack_bits := [32]byte{}
-
 		for {
 
 			// receive packets
@@ -183,8 +189,28 @@ func mainReturnWithCode() int {
 						// todo: if the payload packet sequence is greater than the challenge token sequence, clear the challenge token
 
 					case core.ChallengePacket:
+						
 						fmt.Printf("received %d byte challenge packet from gateway\n", len(packetData))
-						// todo: store the challenge token somewhere, so it gets picked up next payload packet. if we already have a challenge token, store this one if its sequence is higher
+						
+						if len(packetData) != 1 + core.EncryptedChallengeTokenBytes + 8 {
+							fmt.Printf("bad challenge packet size")
+							continue
+						}
+
+						packetChallengeTokenData := packetData[1:1+core.EncryptedChallengeTokenBytes]
+
+						packetChallengeSequence := uint64(0)
+						index := 1 + core.EncryptedChallengeTokenBytes
+						core.ReadUint64(packetData, &index, &packetChallengeSequence)
+						
+						fmt.Printf("packet challenge sequence is %d\n", packetChallengeSequence)
+
+						if !hasChallengeToken || challengeTokenSequence < packetChallengeSequence {
+							fmt.Printf("*** updated challenge token: %d ***\n", packetChallengeSequence)
+							hasChallengeToken = true
+							copy(challengeTokenData[:], packetChallengeTokenData)
+							challengeTokenSequence = packetChallengeSequence
+						}
 					}
 
 				default:

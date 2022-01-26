@@ -24,7 +24,7 @@ TODO
 
 	Client reads the challenge token in the challenge packet when received, and the sequence number of the challenge.
 
-	If the client has no challenge token stored, OR, the challenge token has higher sequence number that the current challenge, the client should store the challenge token + sequence number as current.
+	If the client has no challenge token stored, OR, the challenge token has higher sequence number that the current challenge, the client stores the challenge token + sequence number as current.
 
 	-------------
 
@@ -51,3 +51,4 @@ TODO
 	We can't have spoofing of challenge responses coming back from attackers...
 
 	-------------
+	

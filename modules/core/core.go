@@ -638,6 +638,7 @@ func WriteEncryptedChallengeToken(buffer []byte, index *int, token *ChallengeTok
 	tokenData := buffer[*index:*index+ChallengeTokenBytes+HMACBytes_SecretBox]
 	WriteChallengeToken(buffer, index, token)
 	Encrypt_SecretBox(privateKey, nonce, tokenData, ChallengeTokenBytes)
+	*index += HMACBytes_SecretBox
 }
 
 func ReadEncryptedChallengeToken(buffer []byte, index *int, token *ChallengeToken, privateKey []byte) bool {
@@ -651,5 +652,7 @@ func ReadEncryptedChallengeToken(buffer []byte, index *int, token *ChallengeToke
 	if err != nil {
 		return false
 	}
-	return ReadChallengeToken(buffer, index, token)
+	result := ReadChallengeToken(buffer, index, token)
+	*index += HMACBytes_SecretBox
+	return result
 }

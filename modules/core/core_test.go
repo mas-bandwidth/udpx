@@ -299,6 +299,8 @@ func TestChallengeToken(t *testing.T) {
 	index := 0
 
 	WriteChallengeToken(buffer, &index, &challengeToken)
+	
+	assert.Equal(t, index, ChallengeTokenBytes)
 
 	var readChallengeToken ChallengeToken
 
@@ -308,6 +310,7 @@ func TestChallengeToken(t *testing.T) {
 
 	assert.True(t, result)
 	assert.Equal(t, challengeToken, readChallengeToken)
+	assert.Equal(t, index, ChallengeTokenBytes)
 
 	// can't read a token if the buffer is too small
 
@@ -321,9 +324,11 @@ func TestChallengeToken(t *testing.T) {
 
 	index = 0
 	WriteEncryptedChallengeToken(buffer, &index, &challengeToken, privateKey)
+	assert.Equal(t, index, EncryptedChallengeTokenBytes)
 
 	index = 0
 	result = ReadEncryptedChallengeToken(buffer, &index, &readChallengeToken, privateKey)
+	assert.Equal(t, index, EncryptedChallengeTokenBytes)
 
 	assert.True(t, result)
 	assert.Equal(t, challengeToken, readChallengeToken)
