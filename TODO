@@ -64,6 +64,16 @@ TODO
 
 	No matter what is done, we need to move the packet type to the front of the packet for gateway -> client packets.
 
+	--------------
+
+	Change "hasChallengeToken" to be a uint8_t flags, and have bit 0 mean "challenge token".
+
+	This way it can be used for other packet options, as needed.
+
+	Much better for the spec.
+
+	--------------
+
 	===========================================
 
 

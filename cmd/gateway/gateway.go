@@ -271,9 +271,9 @@ func mainReturnWithCode() int {
 
 					// decrypt packet
 
-					publicKeyIndex := core.VersionBytes + core.ChonkleBytes
-					sequenceIndex := core.VersionBytes + core.ChonkleBytes + core.SessionIdBytes
-					encryptedDataIndex := core.VersionBytes + core.ChonkleBytes + core.SessionIdBytes + core.SequenceBytes
+					publicKeyIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes
+					sequenceIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes + core.SessionIdBytes
+					encryptedDataIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes + core.SessionIdBytes + core.SequenceBytes
 
 					senderPublicKey := packetData[publicKeyIndex : publicKeyIndex+core.SessionIdBytes]
 					sequenceData := packetData[sequenceIndex : sequenceIndex+core.SequenceBytes]
@@ -294,22 +294,12 @@ func mainReturnWithCode() int {
 
 					headerIndex := core.PrefixBytes
 					
-					challengeIndex := headerIndex + core.HeaderBytes
-					challengeBytes := 1
-					if packetData[challengeIndex] == 1 {
-						challengeBytes += core.EncryptedChallengeTokenBytes
-					}
-
-					payloadIndex := challengeIndex + challengeBytes
+					payloadIndex := headerIndex + core.HeaderBytes
 					payloadBytes := packetBytes - payloadIndex - core.PostfixBytes
 
 					header := packetData[headerIndex:headerIndex+core.HeaderBytes]
 
-					challenge := packetData[challengeIndex:challengeIndex+challengeBytes]
-					
 					payload := packetData[payloadIndex:payloadIndex+payloadBytes]
-
-					fmt.Printf("payload is %d bytes\n", len(payload))
 
 					// ignore packet types we don't support
 
@@ -327,13 +317,17 @@ func mainReturnWithCode() int {
 
 					// get challenge token data
 
+					flagsIndex := core.SessionIdBytes + core.SequenceBytes + core.AckBytes + core.AckBitsBytes + core.PacketTypeBytes
 					var challengeTokenData []byte
-					hasChallengeToken := challenge[0] == 1
+					hasChallengeToken := ( header[flagsIndex] & core.Flags_ChallengeToken ) != 0
 					if hasChallengeToken {
-						challengeTokenData = challenge[1:]
+						challengeTokenData = payload[0:core.EncryptedChallengeTokenBytes]
+						payload = payload[core.EncryptedChallengeTokenBytes:]
 					}					
 
 					// process payload packet
+
+					fmt.Printf("payload is %d bytes\n", len(payload))
 
 					var sessionId [core.SessionIdBytes]byte
 					for i := 0; i < core.SessionIdBytes; i++ {
@@ -389,7 +383,7 @@ func mainReturnWithCode() int {
 
 							// respond with a challenge
 
-							challengePacketData := make([]byte, 1 + core.EncryptedChallengeTokenBytes + 8)
+							challengePacketData := make([]byte, core.VersionBytes + core.PacketTypeBytes + core.EncryptedChallengeTokenBytes + 8)
 							
 							challengeToken := core.ChallengeToken{}
 							challengeToken.ExpireTimestamp = uint64(time.Now().Unix() + ChallengeTokenTimeout)
@@ -397,6 +391,8 @@ func mainReturnWithCode() int {
 							challengeToken.Sequence = sequence
 							
 							index := 0
+							version := byte(0)
+							core.WriteUint8(challengePacketData, &index, version)
 							core.WriteUint8(challengePacketData, &index, core.ChallengePacket)
 							core.WriteEncryptedChallengeToken(challengePacketData, &index, &challengeToken, challengePrivateKey)
 							core.WriteUint64(challengePacketData, &index, sequence)
@@ -430,6 +426,10 @@ func mainReturnWithCode() int {
 					forwardPacketData := make([]byte, MaxPacketSize)
 
 					index = 0
+
+					version := byte(0)
+
+					core.WriteUint8(forwardPacketData, &index, version)
 					core.WriteAddress(forwardPacketData, &index, gatewayInternalAddress)
 					core.WriteAddress(forwardPacketData, &index, from)
 					core.WriteBytes(forwardPacketData, &index, header, core.HeaderBytes)
@@ -541,32 +541,29 @@ func mainReturnWithCode() int {
 
 					index = 0
 
-					core.WriteUint(forwardPacketData, &index, core.PayloadPacket)
+					version := byte(0)
+
+					core.WriteUint8(forwardPacketData, &index, version)
+					core.WriteUint8(forwardPacketData, &index, core.PayloadPacket)
+					// todo: chonkle
+					core.WriteBytes(forwardPacketData, &index, header, core.HeaderBytes)
 					core.WriteBytes(forwardPacketData, &index, payload, payloadBytes)
+					// todo: hmac
+					// todo: pittle
 
-					// todo: construct the packet to send to the client (add prefix and postfixes as well)
-
-					forwardPacketBytes = index
+					forwardPacketBytes := index
 					forwardPacketData = forwardPacketData[:forwardPacketBytes]
 
 					// todo: encrypt the packet to send to the client
 
 					// ...
 
-					// todo: send the packet to the client
+					// send the packet to the client
 
-					_ = forwardPacketData
-
-					/*
-
-					packetData = packetData[index:]
-					packetBytes = len(packetData)
-
-					if _, err := publicSocket[thread].WriteToUDP(packetData, &clientAddress); err != nil {
+					if _, err := publicSocket[thread].WriteToUDP(forwardPacketData, &clientAddress); err != nil {
 						core.Error("failed to forward packet to client: %v", err)
 					}
-					fmt.Printf("send %d byte packet to %s\n", packetBytes, clientAddress.String())
-					*/
+					fmt.Printf("send %d byte packet to %s\n", len(forwardPacketData), clientAddress.String())
 				}
 
 				wg.Done()

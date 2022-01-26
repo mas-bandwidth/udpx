@@ -151,8 +151,13 @@ func mainReturnWithCode() int {
 					continue
 				}
 
-				if packetData[0] != core.PayloadPacket && packetData[0] != core.ChallengePacket {
-					fmt.Printf("unknown packet type %d\n", packetData[0])
+				if packetData[0] != 0 {
+					fmt.Printf("unknown packet version: %d\n", packetData[0])
+					continue
+				}
+
+				if packetData[1] != core.PayloadPacket && packetData[1] != core.ChallengePacket {
+					fmt.Printf("unknown packet type %d\n", packetData[1])
 					continue
 				}
 
@@ -180,17 +185,17 @@ func mainReturnWithCode() int {
 				select {
 				case packetData := <-receivedPackets:
 
-					packetType := packetData[0]
-
-					// todo: decryption and signature check must pass
-
-					// todo: sequence must not be too old
+					packetType := packetData[core.VersionBytes]
 
 					switch packetType {
 
 					case core.PayloadPacket:
 
 						fmt.Printf("received %d byte payload packet from gateway\n", len(packetData))
+
+						// todo: sequence must not be too old
+
+						// todo: decrypt packet must succeed
 
 						hasChallengeToken = false
 
@@ -200,15 +205,15 @@ func mainReturnWithCode() int {
 						
 						fmt.Printf("received %d byte challenge packet from gateway\n", len(packetData))
 						
-						if len(packetData) != 1 + core.EncryptedChallengeTokenBytes + 8 {
+						if len(packetData) != core.VersionBytes + core.PacketTypeBytes + core.EncryptedChallengeTokenBytes + 8 {
 							fmt.Printf("bad challenge packet size")
 							continue
 						}
 
-						packetChallengeTokenData := packetData[1:1+core.EncryptedChallengeTokenBytes]
+						packetChallengeTokenData := packetData[2:2+core.EncryptedChallengeTokenBytes]
 
 						packetChallengeSequence := uint64(0)
-						index := 1 + core.EncryptedChallengeTokenBytes
+						index := core.VersionBytes + core.PacketTypeBytes + core.EncryptedChallengeTokenBytes
 						core.ReadUint64(packetData, &index, &packetChallengeSequence)
 						
 						if !hasChallengeToken || challengeTokenSequence < packetChallengeSequence {
@@ -250,7 +255,7 @@ func mainReturnWithCode() int {
 			core.WriteBytes(packetData, &index, ack_bits[:], len(ack_bits))
 			core.WriteUint8(packetData, &index, core.PayloadPacket)
 			if hasChallengeToken {
-				core.WriteUint8(packetData, &index, 1)
+				core.WriteUint8(packetData, &index, core.Flags_ChallengeToken)
 				core.WriteBytes(packetData, &index, challengeTokenData[:], core.EncryptedChallengeTokenBytes)
 			} else {
 				core.WriteUint8(packetData, &index, 0)

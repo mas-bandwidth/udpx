@@ -192,6 +192,7 @@ func mainReturnWithCode() int {
 
 				index := 0
 
+				var version uint8
 				var gatewayInternalAddress net.UDPAddr
 				var clientAddress net.UDPAddr
 				var sessionId [core.SessionIdBytes]byte
@@ -199,6 +200,13 @@ func mainReturnWithCode() int {
 				var ack uint64
 				var ack_bits [core.AckBitsBytes]byte
 				var packetType byte
+				var flags byte
+
+				core.ReadUint8(packetData, &index, &version)
+
+				if version != 0 {
+					fmt.Printf("unknown packet version: %d\n", version)
+				}
 
 				core.ReadAddress(packetData, &index, &gatewayInternalAddress)
 				core.ReadAddress(packetData, &index, &clientAddress)
@@ -207,6 +215,7 @@ func mainReturnWithCode() int {
 				core.ReadUint64(packetData, &index, &ack)
 				core.ReadBytes(packetData, &index, ack_bits[:], core.AckBitsBytes)
 				core.ReadUint8(packetData, &index, &packetType)
+				core.ReadUint8(packetData, &index, &flags)
 
 				if packetType != core.PayloadPacket {
 					fmt.Printf("unknown packet type: %d\n", packetType)
@@ -260,7 +269,7 @@ func mainReturnWithCode() int {
 
 				index = 0
 
-				version := byte(0)
+				version = byte(0)
 
 				send_sequence := sessionEntry.SendSequence
 				send_ack := sessionEntry.RecvSequence
