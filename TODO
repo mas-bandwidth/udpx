@@ -18,13 +18,11 @@ DONE
 
 	Write the challenge sequence number after the challenge token, since the client needs this too
 
-TODO
-
-	-------------
-
 	Client reads the challenge token in the challenge packet when received, and the sequence number of the challenge.
 
 	If the client has no challenge token stored, OR, the challenge token has higher sequence number that the current challenge, the client stores the challenge token + sequence number as current.
+
+TODO
 
 	-------------
 
@@ -34,7 +32,13 @@ TODO
 
 	-------------
 
-	When the client receives a payload packet back from the server, with ack >= challenge token sequence, the client clears the challenge token.
+	Update the gateway to look for the challenge token in the payload packet
+
+	If no session entry exists, but the challenge token exists, add the session map entry and pass the payload packet through to the server.
+
+	-------------
+
+	When the client receives a payload packet back from the server that decrypts, clear the challenge token.
 
 	-------------
 
@@ -48,7 +52,6 @@ TODO
 
 	Need to standardize packets sent from gateway -> client to have the same header, chonkle, pittle and encryption.
 
-	We can't have spoofing of challenge responses coming back from attackers...
+	We can't have spoofing of gateway -> client packets...
 
 	-------------
-	
