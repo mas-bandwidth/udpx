@@ -36,11 +36,9 @@ DONE
 
 	When the client receives a payload packet back from the server clear the challenge token.
 
-TODO
-
-	-------------
-
 	Actually decrypt and verify the challenge token
+
+TODO
 
 	-------------
 

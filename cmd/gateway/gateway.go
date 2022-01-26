@@ -283,31 +283,38 @@ func mainReturnWithCode() int {
 						nonce[i] = sequenceData[i]
 					}
 
+					// decrypt packet
+
 					err = core.Decrypt_Box(senderPublicKey, gatewayPrivateKey, nonce, encryptedData, len(encryptedData))
 					if err != nil {
 						fmt.Printf("decryption failed\n")
 						continue
 					}
 
-					// todo: we really want here a concept of "header" and "payload"
+					// split decrypted packet into various pieces
 
-					// header is the sequence/ack/ack_bits/packet_type
+					const HeaderBytes = core.SessionIdBytes + core.SequenceBytes + core.AckBytes + core.AckBitsBytes + core.PacketTypeBytes
 
-					// payload is the actual data
+					headerIndex := core.VersionBytes + core.ChonkleBytes
+					
+					challengeIndex := headerIndex + HeaderBytes
+					challengeBytes := 1
+					if packetData[challengeIndex] == 1 {
+						challengeBytes += core.EncryptedChallengeTokenBytes
+					}
 
-					// we actually need to splice the two into the forwarded packet (stripping out the optional challenge token in the middle)
+					payloadIndex := challengeIndex + challengeBytes
+					payloadBytes := packetBytes - core.PittleBytes - core.HMACBytes_Box
 
-					// --------------------------------
+					header := packetData[headerIndex:headerIndex+HeaderBytes]
 
-					// decrypt payload
-
-					payloadIndex := core.VersionBytes + core.ChonkleBytes
-					payloadData := packetData[payloadIndex : packetBytes-core.PittleBytes-core.HMACBytes_Box]
-					payloadBytes := len(payloadData)
+					challenge := packetData[challengeIndex:challengeIndex+challengeBytes]
+					
+					payload := packetData[payloadIndex:payloadIndex+payloadBytes]
 
 					// ignore packet types we don't support
 
-					packetType := payloadData[core.SessionIdBytes+core.SequenceBytes+core.AckBytes+core.AckBitsBytes]
+					packetType := header[core.SessionIdBytes+core.SequenceBytes+core.AckBytes+core.AckBitsBytes]
 					if packetType != core.PayloadPacket {
 						fmt.Printf("unknown packet type: %d\n", packetType)
 						continue
@@ -322,11 +329,9 @@ func mainReturnWithCode() int {
 					// get challenge token data
 
 					var challengeTokenData []byte
-					hasChallengeToken := payloadData[core.SessionIdBytes+core.SequenceBytes+core.AckBytes+core.AckBitsBytes+core.PacketTypeBytes] == 1
+					hasChallengeToken := challenge[0] == 1
 					if hasChallengeToken {
-						challengeTokenIndex := core.SessionIdBytes + core.SequenceBytes + core.AckBytes + core.AckBitsBytes + core.PacketTypeBytes + 1
-						challengeTokenData = payloadData[challengeTokenIndex:challengeTokenIndex+core.EncryptedChallengeTokenBytes]
-						// todo: adjust the payload data to exclude the challenge token
+						challengeTokenData = challenge[1:]
 					}					
 
 					// process payload packet
@@ -371,8 +376,6 @@ func mainReturnWithCode() int {
 								continue
 							}
 
-							// punch through
-
 							var sessionId [core.SessionIdBytes]byte
 							for i := 0; i < core.SessionIdBytes; i++ {
 								sessionId[i] = senderPublicKey[i]
@@ -380,6 +383,8 @@ func mainReturnWithCode() int {
 
 							sessionEntry := &SessionEntry{sequence: challengeToken.Sequence}
 							sessionMap_New[sessionId] = sessionEntry
+
+							fmt.Printf("session %s punched through from %s\n", core.SessionIdString(sessionId[:]), from.String())
 
 						} else {
 
@@ -419,7 +424,8 @@ func mainReturnWithCode() int {
 					index = 0
 					core.WriteAddress(forwardPacketData, &index, gatewayInternalAddress)
 					core.WriteAddress(forwardPacketData, &index, from)
-					core.WriteBytes(forwardPacketData, &index, payloadData, payloadBytes) // todo: obvs this should be zero copy
+					core.WriteBytes(forwardPacketData, &index, header, HeaderBytes)
+					core.WriteBytes(forwardPacketData, &index, payload, len(payload))
 
 					forwardPacketBytes := index
 					forwardPacketData = forwardPacketData[:forwardPacketBytes]
