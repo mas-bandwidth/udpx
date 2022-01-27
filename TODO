@@ -60,8 +60,6 @@ DONE
 
 	--------------
 
-TODO
-
 	No matter what is done, we need to move the packet type to the front of the packet for gateway -> client packets.
 
 	--------------
@@ -71,6 +69,41 @@ TODO
 	This way it can be used for other packet options, as needed.
 
 	Much better for the spec.
+
+	--------------
+
+	OK, I've adjusted the payloads enough that I can now have an encrypted payload packet down from the gateway -> client, and a completely separate encryption scheme for the challenge packet.
+
+	The next step is to encrypt via the 24 byte nonce, using bits above the 8 byte sequence to indicate things.
+
+	I'll need to set the 64th bit (zero based) to one, in the nonce, to specify the server to client direction, and to zero, to specify the client -> server direction.
+
+	That means that I could use the 65th bit (zero based) to indicate the nonce is for a challenge token.
+
+	--------------
+
+	Actually, this means that we'll need:
+
+	2 bits in the the 9th byte of nonce.
+
+	both bits 0 = client -> server packet
+	first bit 1, second bit 0 = server -> client packet
+	first bit 0, second bit 1 = challenge packet
+
+	These values correspond to:
+
+		0,1,2 in the first two bits. 3 is reserved.
+
+	--------------
+
+	OK client now has encrypted challenge token sent down to it.
+
+	--------------
+
+TODO
+
+	--------------
+
 
 	--------------
 

@@ -205,15 +205,29 @@ func mainReturnWithCode() int {
 						
 						fmt.Printf("received %d byte challenge packet from gateway\n", len(packetData))
 						
-						if len(packetData) != core.VersionBytes + core.PacketTypeBytes + core.EncryptedChallengeTokenBytes + 8 {
-							fmt.Printf("bad challenge packet size")
+						if len(packetData) != 125 {
+							fmt.Printf("bad challenge packet size: %d\n", len(packetData))
 							continue
 						}
 
-						packetChallengeTokenData := packetData[2:2+core.EncryptedChallengeTokenBytes]
+						nonceIndex := core.VersionBytes + core.PacketTypeBytes
+
+						encryptedDataIndex := nonceIndex + core.NonceBytes_Box
+
+						encryptedData := packetData[encryptedDataIndex:len(packetData)]
+
+						nonce := packetData[nonceIndex:core.NonceBytes_Box]
+
+						err = core.Decrypt_Box(gatewayPublicKey, clientPrivateKey, nonce, encryptedData, len(encryptedData))
+						if err != nil {
+							fmt.Printf("decryption failed\n")
+							continue
+						}
+
+						packetChallengeTokenData := packetData[encryptedDataIndex:encryptedDataIndex+core.EncryptedChallengeTokenBytes]
 
 						packetChallengeSequence := uint64(0)
-						index := core.VersionBytes + core.PacketTypeBytes + core.EncryptedChallengeTokenBytes
+						index := encryptedDataIndex + core.EncryptedChallengeTokenBytes
 						core.ReadUint64(packetData, &index, &packetChallengeSequence)
 						
 						if !hasChallengeToken || challengeTokenSequence < packetChallengeSequence {

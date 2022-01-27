@@ -248,6 +248,11 @@ func mainReturnWithCode() int {
 
 					// packet filter
 
+					if !core.BasicPacketFilter(packetData, packetBytes) {
+						fmt.Printf("basic packet filter failed\n")
+						continue
+					}
+
 					var magic [8]byte
 
 					var fromAddressData [4]byte
@@ -258,11 +263,6 @@ func mainReturnWithCode() int {
 
 					core.GetAddressData(from, fromAddressData[:], &fromAddressPort)
 					core.GetAddressData(gatewayAddress, toAddressData[:], &toAddressPort)
-
-					if !core.BasicPacketFilter(packetData, packetBytes) {
-						fmt.Printf("basic packet filter failed\n")
-						continue
-					}
 
 					if !core.AdvancedPacketFilter(packetData, magic[:], fromAddressData[:], fromAddressPort, toAddressData[:], toAddressPort, packetBytes) {
 						fmt.Printf("advanced packet filter failed\n")
@@ -383,19 +383,34 @@ func mainReturnWithCode() int {
 
 							// respond with a challenge
 
-							challengePacketData := make([]byte, core.VersionBytes + core.PacketTypeBytes + core.EncryptedChallengeTokenBytes + 8)
+							challengePacketData := make([]byte, MaxPacketSize)
 							
 							challengeToken := core.ChallengeToken{}
 							challengeToken.ExpireTimestamp = uint64(time.Now().Unix() + ChallengeTokenTimeout)
 							challengeToken.ClientAddress = *from
 							challengeToken.Sequence = sequence
 							
+							nonce := [core.NonceBytes_Box]byte{}
+							core.RandomBytes_InPlace(nonce[:])
+							nonce[15] &= 1^(1<<0)
+							nonce[15] |= (1<<1)
+
 							index := 0
+
 							version := byte(0)
 							core.WriteUint8(challengePacketData, &index, version)
 							core.WriteUint8(challengePacketData, &index, core.ChallengePacket)
+							core.WriteBytes(challengePacketData, &index, nonce[:], core.NonceBytes_Box)
+							encryptStart := index
 							core.WriteEncryptedChallengeToken(challengePacketData, &index, &challengeToken, challengePrivateKey)
 							core.WriteUint64(challengePacketData, &index, sequence)
+							encryptFinish := index
+							index += core.HMACBytes_Box
+
+							challengePacketBytes := index
+							challengePacketData = challengePacketData[:challengePacketBytes]
+
+							core.Encrypt_Box(gatewayPrivateKey, sessionId[:], nonce[:], challengePacketData[encryptStart:encryptFinish], encryptFinish-encryptStart)
 
 							if _, err := conn.WriteToUDP(challengePacketData, from); err != nil {
 								core.Error("failed to send challenge packet to client: %v", err)
