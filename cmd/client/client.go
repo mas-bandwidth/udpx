@@ -45,6 +45,7 @@ import (
 )
 
 const MaxPacketSize = 1500
+const OldSequenceThreshold = 100
 
 func main() {
 	os.Exit(mainReturnWithCode())
@@ -99,7 +100,8 @@ func mainReturnWithCode() int {
 	challengeTokenSequence := uint64(0)
 	challengeTokenExpireTimestamp := uint64(0)
 
-	sequence := uint64(0)
+	sendSequence := uint64(0)
+	receiveSequence := uint64(0)
 	ack := uint64(0)
 	ack_bits := [32]byte{}
 
@@ -261,7 +263,7 @@ func mainReturnWithCode() int {
 
 						payload := packetData[payloadIndex:payloadIndex+payloadBytes]
 
-						// ignore packet types we don't support
+						// check encrypted packet type matches
 
 						packetType := header[core.SessionIdBytes+core.SequenceBytes+core.AckBytes+core.AckBitsBytes]
 						if packetType != core.PayloadPacket {
@@ -269,13 +271,16 @@ func mainReturnWithCode() int {
 							continue
 						}
 
-						// get packet sequence number
+						// packet sequence must not be too old
 
 						index := 0
 						sequence := uint64(0)
 						core.ReadUint64(sequenceData, &index, &sequence)
 
-						// todo: sequence must not be too old
+						if receiveSequence > OldSequenceThreshold && sequence < receiveSequence - OldSequenceThreshold {
+							fmt.Printf("packet sequence is too old: %d\n", sequence)
+							continue
+						}
 
 						// process payload packet
 
@@ -355,7 +360,7 @@ func mainReturnWithCode() int {
 			index += core.ChonkleBytes
 			core.WriteBytes(packetData, &index, sessionId, core.SessionIdBytes)
 			sequenceData := packetData[index : index+core.SequenceBytes]
-			core.WriteUint64(packetData, &index, sequence)
+			core.WriteUint64(packetData, &index, sendSequence)
 			encryptStart := index
 			core.WriteUint64(packetData, &index, ack)
 			core.WriteBytes(packetData, &index, ack_bits[:], len(ack_bits))
@@ -422,7 +427,7 @@ func mainReturnWithCode() int {
 
 			time.Sleep(100 * time.Millisecond)
 
-			sequence++
+			sendSequence++
 		}
 
 	}()
