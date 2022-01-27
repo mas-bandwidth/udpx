@@ -146,7 +146,7 @@ func mainReturnWithCode() int {
 					continue
 				}
 
-				if packetBytes < 1 {
+				if packetBytes < core.PrefixBytes {
 					fmt.Printf("packet is too small\n")
 					continue
 				}
@@ -158,6 +158,29 @@ func mainReturnWithCode() int {
 
 				if packetData[1] != core.PayloadPacket && packetData[1] != core.ChallengePacket {
 					fmt.Printf("unknown packet type %d\n", packetData[1])
+					continue
+				}
+
+				// packet filter
+
+				if !core.BasicPacketFilter(packetData, packetBytes) {
+					fmt.Printf("basic packet filter failed\n")
+					continue
+				}
+
+				var magic [8]byte
+
+				var fromAddressData [4]byte
+				var fromAddressPort uint16
+
+				var toAddressData [4]byte
+				var toAddressPort uint16
+
+				core.GetAddressData(from, fromAddressData[:], &fromAddressPort)
+				core.GetAddressData(clientAddress, toAddressData[:], &toAddressPort)
+
+				if !core.AdvancedPacketFilter(packetData, magic[:], fromAddressData[:], fromAddressPort, toAddressData[:], toAddressPort, packetBytes) {
+					fmt.Printf("advanced packet filter failed\n")
 					continue
 				}
 
@@ -189,40 +212,11 @@ func mainReturnWithCode() int {
 
 					packetBytes := len(packetData)
 
-					from := gatewayAddress
-
 					switch packetType {
 
 					case core.PayloadPacket:
 
 						fmt.Printf("received %d byte payload packet from gateway\n", len(packetData))
-
-						// ==============================================================
-
-						// todo: move packet filter stuff up to recv thread
-
-						// packet filter
-
-						if !core.BasicPacketFilter(packetData, packetBytes) {
-							fmt.Printf("basic packet filter failed\n")
-							continue
-						}
-
-						var magic [8]byte
-
-						var fromAddressData [4]byte
-						var fromAddressPort uint16
-
-						var toAddressData [4]byte
-						var toAddressPort uint16
-
-						core.GetAddressData(from, fromAddressData[:], &fromAddressPort)
-						core.GetAddressData(clientAddress, toAddressData[:], &toAddressPort)
-
-						if !core.AdvancedPacketFilter(packetData, magic[:], fromAddressData[:], fromAddressPort, toAddressData[:], toAddressPort, packetBytes) {
-							fmt.Printf("advanced packet filter failed\n")
-							continue
-						}
 
 						// session id must match client public key
 
@@ -234,11 +228,6 @@ func mainReturnWithCode() int {
 							fmt.Printf("session id mismatch\n")
 							continue
 						}
-
-						// todo: move this up to the recv thread
-
-						// todo
-						_ = sessionId
 
 						// decrypt packet
 
@@ -308,12 +297,12 @@ func mainReturnWithCode() int {
 						
 						fmt.Printf("received %d byte challenge packet from gateway\n", len(packetData))
 						
-						if len(packetData) != 125 {
+						if len(packetData) != 142 {
 							fmt.Printf("bad challenge packet size: %d\n", len(packetData))
 							continue
 						}
 
-						nonceIndex := core.VersionBytes + core.PacketTypeBytes
+						nonceIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes
 
 						encryptedDataIndex := nonceIndex + core.NonceBytes_Box
 
@@ -321,9 +310,9 @@ func mainReturnWithCode() int {
 
 						nonce := packetData[nonceIndex:core.NonceBytes_Box]
 
-						err = core.Decrypt_Box(gatewayPublicKey, clientPrivateKey, nonce, encryptedData, len(encryptedData))
+						err = core.Decrypt_Box(gatewayPublicKey, clientPrivateKey, nonce, encryptedData, len(encryptedData) - core.PittleBytes)
 						if err != nil {
-							fmt.Printf("decryption failed\n")
+							fmt.Printf("challenge packet decryption failed\n")
 							continue
 						}
 

@@ -400,17 +400,48 @@ func mainReturnWithCode() int {
 							version := byte(0)
 							core.WriteUint8(challengePacketData, &index, version)
 							core.WriteUint8(challengePacketData, &index, core.ChallengePacket)
+							chonkle := challengePacketData[index:index+core.ChonkleBytes]
+							index += core.ChonkleBytes
 							core.WriteBytes(challengePacketData, &index, nonce[:], core.NonceBytes_Box)
 							encryptStart := index
 							core.WriteEncryptedChallengeToken(challengePacketData, &index, &challengeToken, challengePrivateKey)
 							core.WriteUint64(challengePacketData, &index, sequence)
 							encryptFinish := index
 							index += core.HMACBytes_Box
+							pittle := challengePacketData[index:index+core.PittleBytes]
+							index += core.PittleBytes
 
 							challengePacketBytes := index
 							challengePacketData = challengePacketData[:challengePacketBytes]
 
 							core.Encrypt_Box(gatewayPrivateKey, sessionId[:], nonce[:], challengePacketData[encryptStart:encryptFinish], encryptFinish-encryptStart)
+
+							// setup packet prefix and postfix
+
+							var magic [core.MagicBytes]byte
+
+							var fromAddressData [4]byte
+							var fromAddressPort uint16
+
+							var toAddressData [4]byte
+							var toAddressPort uint16
+
+							core.GetAddressData(gatewayAddress, fromAddressData[:], &fromAddressPort)
+							core.GetAddressData(from, toAddressData[:], &toAddressPort)
+
+							core.GenerateChonkle(chonkle[:], magic[:], fromAddressData[:], fromAddressPort, toAddressData[:], toAddressPort, challengePacketBytes)
+
+							core.GeneratePittle(pittle[:], fromAddressData[:], fromAddressPort, toAddressData[:], toAddressPort, challengePacketBytes)
+
+							if !core.BasicPacketFilter(challengePacketData, challengePacketBytes) {
+								panic("basic packet filter failed")
+							}
+
+							if !core.AdvancedPacketFilter(challengePacketData, magic[:], fromAddressData[:], fromAddressPort, toAddressData[:], toAddressPort, challengePacketBytes) {
+								panic("advanced packet filter failed")
+							}
+
+							// send it to the client
 
 							if _, err := conn.WriteToUDP(challengePacketData, from); err != nil {
 								core.Error("failed to send challenge packet to client: %v", err)
