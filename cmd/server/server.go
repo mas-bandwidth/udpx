@@ -52,10 +52,12 @@ import (
 
 const MaxPacketSize = 1500
 const SessionMapSwapTime = 60
+const ReliabilityBufferSize = 1024
 
 type SessionEntry struct {
-	RecvSequence uint64
 	SendSequence uint64
+	ReceiveSequence uint64
+	ReceivedPackets [ReliabilityBufferSize]uint64
 }
 
 // Allows us to return an exit code and allows log flushes and deferred functions
@@ -226,7 +228,7 @@ func mainReturnWithCode() int {
 					sessionEntry = sessionMap_Old[sessionId]
 					if sessionEntry == nil {
 						// add new session entry
-						sessionEntry = &SessionEntry{SendSequence: ack+10000, RecvSequence: sequence}
+						sessionEntry = &SessionEntry{SendSequence: ack+10000, ReceiveSequence: sequence}
 						sessionMap_New[sessionId] = sessionEntry
 						fmt.Printf("new session %s from %s\n", core.SessionIdString(sessionId[:]), clientAddress.String())
 					} else {
@@ -241,9 +243,11 @@ func mainReturnWithCode() int {
 					continue
 				}
 
-				if sessionEntry.RecvSequence < sequence {
-					sessionEntry.RecvSequence = sequence
+				if sessionEntry.ReceiveSequence < sequence {
+					sessionEntry.ReceiveSequence = sequence
 				}
+
+				sessionEntry.ReceivedPackets[sequence%ReliabilityBufferSize] = sequence
 
 				payload := packetData[index:]
 
@@ -275,8 +279,10 @@ func mainReturnWithCode() int {
 				flags = byte(0)
 
 				send_sequence := sessionEntry.SendSequence
-				send_ack := sessionEntry.RecvSequence
+				send_ack := sessionEntry.ReceiveSequence
 				var send_ack_bits [core.AckBitsBytes]byte
+
+				core.GetAckBits(sessionEntry.ReceiveSequence, sessionEntry.ReceivedPackets[:], send_ack_bits[:])
 
 				sessionEntry.SendSequence++
 

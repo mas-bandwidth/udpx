@@ -671,3 +671,22 @@ func ReadEncryptedChallengeToken(buffer []byte, index *int, token *ChallengeToke
 	*index += HMACBytes_SecretBox
 	return result
 }
+
+func GetAckBits(latestReceivedSequence uint64, receivedPackets []uint64, ack_bits []byte) {
+	totalBits := uint64(len(ack_bits)*8)
+	ack := make([]byte, totalBits)
+	bufferSize := uint64(len(receivedPackets))
+	i := 0
+	minSequence := uint64(0)
+	if latestReceivedSequence > totalBits {
+		minSequence = latestReceivedSequence - totalBits
+	}
+	for sequence := latestReceivedSequence; sequence > minSequence; sequence-- {
+		if receivedPackets[sequence%bufferSize] == sequence {
+			ack[i] = 1
+		}
+		i++
+	}
+	// todo: convert ack array to ack_bits
+	_ = ack
+}

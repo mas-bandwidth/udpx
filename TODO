@@ -6,17 +6,21 @@ DONE
 
 	Move as much the client packet filters pre-test to recv thread.
 
+	Extend the client to ignore old payload packets by sequence.
+
 TODO
 
 	-------------
 
-	Extend the client to ignore old payload packets by sequence.
+	Port across replay protection from reliable.io and test it.
 
 	-------------
 
-	Port across relay protection from reliable.io and test it.
+	Integrate replay protection in gateway
 
-	Extend the gateway to fully stop replay attacks via replay protection bitfield.
+	-------------
+
+	Integrate relay protection in client
 
 	-------------
 
@@ -24,14 +28,14 @@ TODO
 
 	-------------
 
-	Hook up the reliability layer on the server-side.
+	Integrate reliability layer with the server
 
 	-------------
 
-	Hook up the reliability layer on the client-side.
+	Integrate reliability layer with the client
 
 	-------------
 
-	At this point we should have a functioning reliability layer between the client and server.
+	At this point we should have a functioning reliability system between the client and server.
 
 	-------------
