@@ -60,7 +60,8 @@ const ChallengeTokenTimeout = 10
 const OldSequenceThreshold = 100
 
 type SessionEntry struct {
-	sequence uint64
+	ReceivedSequence uint64
+	ReceivedPackets [OldSequenceThreshold]uint64
 }
 
 func main() {
@@ -374,7 +375,7 @@ func mainReturnWithCode() int {
 								sessionId[i] = senderPublicKey[i]
 							}
 
-							sessionEntry := &SessionEntry{sequence: challengeToken.Sequence}
+							sessionEntry := &SessionEntry{ReceivedSequence: challengeToken.Sequence}
 							sessionMap_New[sessionId] = sessionEntry
 
 							fmt.Printf("session %s punched through from %s\n", core.SessionIdString(sessionId[:]), from.String())
@@ -454,17 +455,29 @@ func mainReturnWithCode() int {
 						continue
 					}
 
+					// update most recently received sequence for this session
+
+					if sessionEntry.ReceivedSequence < sequence {
+						sessionEntry.ReceivedSequence = sequence
+					}
+
 					// drop packets that are too old
 
 					oldSequence := uint64(0)
 
-					if sessionEntry.sequence > OldSequenceThreshold {
-						oldSequence = sessionEntry.sequence - OldSequenceThreshold
+					if sessionEntry.ReceivedSequence > OldSequenceThreshold {
+						oldSequence = sessionEntry.ReceivedSequence - OldSequenceThreshold
 					}
 
 					if sequence < oldSequence {
 						fmt.Printf("sequence number is too old: %d\n", sequence)
 						continue
+					}
+
+					// drop payload packets that have already been forwarded to the server
+
+					if sessionEntry.ReceivedPackets[sequence%OldSequenceThreshold] == sequence {
+						fmt.Printf("packet %d has already been forwarded to the server\n", sequence)
 					}
 
 					// forward payload packet to server
@@ -487,7 +500,12 @@ func mainReturnWithCode() int {
 					if _, err := conn.WriteToUDP(forwardPacketData, serverAddress); err != nil {
 						core.Error("failed to forward payload to server: %v", err)
 					}
+
 					fmt.Printf("send %d byte packet to %s\n", forwardPacketBytes, serverAddress.String())
+
+					// mark packet as received and forward to server
+
+					sessionEntry.ReceivedPackets[sequence%OldSequenceThreshold] = sequence
 				}
 
 				wg.Done()

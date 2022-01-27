@@ -8,34 +8,23 @@ DONE
 
 	Extend the client to ignore old payload packets by sequence.
 
+	Added buffer of received packet sequence numbers to session map entry on server.
+
+	It's much easier doing this with 64bit sequence numbers and no wrap...
+
 TODO
 
-	-------------
+	Extend the gateway to have a smaller sequence buffer (100 entries?) to drop packets already received.
 
-	Port across replay protection from reliable.io and test it.
+	--------------------
 
-	-------------
+	Extend GetAckBits to actually return ack bitfield
 
-	Integrate replay protection in gateway
+	Verify on client the ack bitfield comes down.
 
-	-------------
+	Store acked packets in a sequence buffer on client.
 
-	Integrate relay protection in client
+	Write function to decode ack bitfield to actual acked packets.
 
-	-------------
 
-	Port the reliability layer from reliable.io into golang and test it.
-
-	-------------
-
-	Integrate reliability layer with the server
-
-	-------------
-
-	Integrate reliability layer with the client
-
-	-------------
-
-	At this point we should have a functioning reliability system between the client and server.
-
-	-------------
+	
