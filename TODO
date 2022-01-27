@@ -104,11 +104,19 @@ TODO
 
 	--------------
 
+	Now the payload packet from gateway -> client needs to be encrypted
 
 	--------------
 
-	===========================================
+	Once this payload packet is encrypted, verify it decrypts on the client
 
+	Then verify its size and contents
+
+	--------------
+
+	Now expand both the challenge and payload packets to have prefix and postfix
+
+	--------------
 
 
 

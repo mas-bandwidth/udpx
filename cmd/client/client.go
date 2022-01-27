@@ -187,11 +187,106 @@ func mainReturnWithCode() int {
 
 					packetType := packetData[core.VersionBytes]
 
+					packetBytes := len(packetData)
+
+					from := gatewayAddress
+
 					switch packetType {
 
 					case core.PayloadPacket:
 
 						fmt.Printf("received %d byte payload packet from gateway\n", len(packetData))
+
+						// ==============================================================
+
+						// todo: move packet filter stuff up to recv thread
+
+						// packet filter
+
+						if !core.BasicPacketFilter(packetData, packetBytes) {
+							fmt.Printf("basic packet filter failed\n")
+							continue
+						}
+
+						var magic [8]byte
+
+						var fromAddressData [4]byte
+						var fromAddressPort uint16
+
+						var toAddressData [4]byte
+						var toAddressPort uint16
+
+						core.GetAddressData(from, fromAddressData[:], &fromAddressPort)
+						core.GetAddressData(clientAddress, toAddressData[:], &toAddressPort)
+
+						if !core.AdvancedPacketFilter(packetData, magic[:], fromAddressData[:], fromAddressPort, toAddressData[:], toAddressPort, packetBytes) {
+							fmt.Printf("advanced packet filter failed\n")
+							continue
+						}
+
+						/*
+						// decrypt packet
+
+						publicKeyIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes
+						sequenceIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes + core.SessionIdBytes
+						encryptedDataIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes + core.SessionIdBytes + core.SequenceBytes
+
+						senderPublicKey := packetData[publicKeyIndex : publicKeyIndex+core.SessionIdBytes]
+						sequenceData := packetData[sequenceIndex : sequenceIndex+core.SequenceBytes]
+						encryptedData := packetData[encryptedDataIndex : packetBytes-core.PittleBytes]
+
+						nonce := make([]byte, core.NonceBytes_Box)
+						for i := 0; i < core.SequenceBytes; i++ {
+							nonce[i] = sequenceData[i]
+						}
+
+						err = core.Decrypt_Box(senderPublicKey, gatewayPrivateKey, nonce, encryptedData, len(encryptedData))
+						if err != nil {
+							fmt.Printf("decryption failed\n")
+							continue
+						}
+
+						// split decrypted packet into various pieces
+
+						headerIndex := core.PrefixBytes
+						
+						payloadIndex := headerIndex + core.HeaderBytes
+						payloadBytes := packetBytes - payloadIndex - core.PostfixBytes
+
+						header := packetData[headerIndex:headerIndex+core.HeaderBytes]
+
+						payload := packetData[payloadIndex:payloadIndex+payloadBytes]
+
+						// ignore packet types we don't support
+
+						packetType := header[core.SessionIdBytes+core.SequenceBytes+core.AckBytes+core.AckBitsBytes]
+						if packetType != core.PayloadPacket {
+							fmt.Printf("unknown packet type: %d\n", packetType)
+							continue
+						}
+
+						// get packet sequence number
+
+						index := 0
+						sequence := uint64(0)
+						core.ReadUint64(sequenceData, &index, &sequence)
+
+						// get challenge token data
+
+						flagsIndex := core.SessionIdBytes + core.SequenceBytes + core.AckBytes + core.AckBitsBytes + core.PacketTypeBytes
+						var challengeTokenData []byte
+						hasChallengeToken := ( header[flagsIndex] & core.Flags_ChallengeToken ) != 0
+						if hasChallengeToken {
+							challengeTokenData = payload[0:core.EncryptedChallengeTokenBytes]
+							payload = payload[core.EncryptedChallengeTokenBytes:]
+						}					
+
+						// process payload packet
+
+						fmt.Printf("payload is %d bytes\n", len(payload))
+						*/
+
+						// ==============================================================
 
 						// todo: sequence must not be too old
 

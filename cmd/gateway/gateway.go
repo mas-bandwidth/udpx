@@ -392,8 +392,8 @@ func mainReturnWithCode() int {
 							
 							nonce := [core.NonceBytes_Box]byte{}
 							core.RandomBytes_InPlace(nonce[:])
-							nonce[15] &= 1^(1<<0)
-							nonce[15] |= (1<<1)
+							nonce[9] &= 1^(1<<0)
+							nonce[9] |= (1<<1)
 
 							index := 0
 
@@ -536,7 +536,7 @@ func mainReturnWithCode() int {
 
 					// read the client address the packet should be forwarded to
 
-					index := 0
+					index := core.VersionBytes
 					var clientAddress net.UDPAddr
 					core.ReadAddress(packetData, &index, &clientAddress)
 
@@ -550,7 +550,7 @@ func mainReturnWithCode() int {
 					header := packetData[headerIndex:headerIndex+core.HeaderBytes]
 					payload := packetData[payloadIndex:payloadIndex+payloadBytes]
 
-					// sketch out the packet to send to the client
+					// build the packet to send to the client
 
 					forwardPacketData := make([]byte, MaxPacketSize)
 
@@ -560,20 +560,60 @@ func mainReturnWithCode() int {
 
 					core.WriteUint8(forwardPacketData, &index, version)
 					core.WriteUint8(forwardPacketData, &index, core.PayloadPacket)
-					// todo: chonkle
+					chonkle := forwardPacketData[index:index+core.ChonkleBytes]
+					index += core.ChonkleBytes
+					encryptStart := index
 					core.WriteBytes(forwardPacketData, &index, header, core.HeaderBytes)
 					core.WriteBytes(forwardPacketData, &index, payload, payloadBytes)
-					// todo: hmac
-					// todo: pittle
+					encryptFinish := index
+					index += core.HMACBytes_Box
+					pittle := forwardPacketData[index:index+core.PittleBytes]
+					index += core.PittleBytes
 
 					forwardPacketBytes := index
 					forwardPacketData = forwardPacketData[:forwardPacketBytes]
 
-					// todo: encrypt the packet to send to the client
+					// encrypt the packet
 
-					// ...
+					sessionId := header[:core.SessionIdBytes]
 
-					// send the packet to the client
+					sequenceData := header[core.SessionIdBytes:core.SessionIdBytes+core.SequenceBytes]
+
+					nonce := make([]byte, core.NonceBytes_Box)
+					for i := 0; i < core.SequenceBytes; i++ {
+						nonce[i] = sequenceData[i]
+					}
+					nonce[9] |= (1<<0)
+					nonce[9] &= 1^(1<<1)
+
+					core.Encrypt_Box(gatewayPrivateKey, sessionId, nonce, packetData[encryptStart:encryptFinish], encryptFinish-encryptStart)
+
+					// setup packet prefix and postfix
+
+					var magic [core.MagicBytes]byte
+
+					var fromAddressData [4]byte
+					var fromAddressPort uint16
+
+					var toAddressData [4]byte
+					var toAddressPort uint16
+
+					core.GetAddressData(gatewayAddress, fromAddressData[:], &fromAddressPort)
+					core.GetAddressData(&clientAddress, toAddressData[:], &toAddressPort)
+
+					core.GenerateChonkle(chonkle[:], magic[:], fromAddressData[:], fromAddressPort, toAddressData[:], toAddressPort, forwardPacketBytes)
+
+					core.GeneratePittle(pittle[:], fromAddressData[:], fromAddressPort, toAddressData[:], toAddressPort, forwardPacketBytes)
+
+					if !core.BasicPacketFilter(forwardPacketData, forwardPacketBytes) {
+						panic("basic packet filter failed")
+					}
+
+					if !core.AdvancedPacketFilter(forwardPacketData, magic[:], fromAddressData[:], fromAddressPort, toAddressData[:], toAddressPort, forwardPacketBytes) {
+						panic("advanced packet filter failed")
+					}
+
+					// send it to the client
 
 					if _, err := publicSocket[thread].WriteToUDP(forwardPacketData, &clientAddress); err != nil {
 						core.Error("failed to forward packet to client: %v", err)
