@@ -12,11 +12,9 @@ DONE
 
 	It's much easier doing this with 64bit sequence numbers and no wrap...
 
-TODO
-
 	Extend the gateway to have a smaller sequence buffer (100 entries?) to drop packets already received.
 
-	--------------------
+TODO
 
 	Extend GetAckBits to actually return ack bitfield
 
