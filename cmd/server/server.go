@@ -256,8 +256,7 @@ func mainReturnWithCode() int {
 
 				for i := 0; i < core.MinPayloadBytes; i++ {
 					if payload[i] != byte(i) {
-						fmt.Printf("payload data mismatch at index %d. expected %d, got %d\n", i, byte(i), payload[i])
-						continue
+						panic(fmt.Sprintf("payload data mismatch at index %d. expected %d, got %d\n", i, byte(i), payload[i]))
 					}
 				}
 
@@ -266,10 +265,14 @@ func mainReturnWithCode() int {
 				responsePacketData := make([]byte, MaxPacketSize)
 
 				dummyPayload := make([]byte, core.MinPayloadBytes)
+				for i := 0; i < core.MinPayloadBytes; i++ {
+					dummyPayload[i] = byte(i)
+				}
 
 				index = 0
 
 				version = byte(0)
+				flags = byte(0)
 
 				send_sequence := sessionEntry.SendSequence
 				send_ack := sessionEntry.RecvSequence
@@ -278,12 +281,14 @@ func mainReturnWithCode() int {
 				sessionEntry.SendSequence++
 
 				core.WriteUint8(responsePacketData, &index, version)
+				core.WriteUint8(responsePacketData, &index, core.PayloadPacket)
 				core.WriteAddress(responsePacketData, &index, &clientAddress)
-				core.WriteBytes(packetData, &index, sessionId[:], core.SessionIdBytes)
-				core.WriteUint64(packetData, &index, send_sequence)
-				core.WriteUint64(packetData, &index, send_ack)
-				core.WriteBytes(packetData, &index, send_ack_bits[:], len(send_ack_bits))
-				core.WriteUint8(packetData, &index, core.PayloadPacket)
+				core.WriteBytes(responsePacketData, &index, sessionId[:], core.SessionIdBytes)
+				core.WriteUint64(responsePacketData, &index, send_sequence)
+				core.WriteUint64(responsePacketData, &index, send_ack)
+				core.WriteBytes(responsePacketData, &index, send_ack_bits[:], len(send_ack_bits))
+				core.WriteUint8(responsePacketData, &index, core.PayloadPacket)
+				core.WriteUint8(responsePacketData, &index, flags)
 				core.WriteBytes(responsePacketData, &index, dummyPayload, len(dummyPayload))
 
 				responsePacketBytes := index

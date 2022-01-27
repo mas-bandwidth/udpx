@@ -100,21 +100,40 @@ DONE
 
 	--------------
 
-TODO
-
-	--------------
-
 	Now the payload packet from gateway -> client needs to be encrypted
 
 	--------------
 
-	Once this payload packet is encrypted, verify it decrypts on the client
+	Client decryption is failing for payload packet. What's going on?
 
-	Then verify its size and contents
+	Multiple issues, fixed the trivial ones, but the reason it's not working is because the session id passed down from server -> gateway is all zero bytes.
 
 	--------------
 
-	Now expand both the challenge and payload packets to have prefix and postfix
+	Track down how session id is getting lost on the server.
+
+	Stupid error...
+
+	--------------
+
+	Client verify payload size and contents
+
+	--------------
+
+
+TODO
+
+	--------------
+
+	Expand the challenge packet to also have prefix and postfix.
+
+	--------------
+
+	Verify client packet filters pass for challenge packets.
+
+	--------------
+
+	Move as much the client packet filters pre-test to recv thread.
 
 	--------------
 

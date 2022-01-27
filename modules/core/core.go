@@ -611,6 +611,15 @@ func AddressEqual(a *net.UDPAddr, b *net.UDPAddr) bool {
 	return net.IP.Equal(a.IP, b.IP) && a.Port == b.Port
 }
 
+func SessionIdEqual(a []byte, b []byte) bool {
+	for i := 0; i < SessionIdBytes; i++ {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
 type ChallengeToken struct {
 	ExpireTimestamp uint64
 	ClientAddress   net.UDPAddr

@@ -224,23 +224,38 @@ func mainReturnWithCode() int {
 							continue
 						}
 
-						/*
+						// session id must match client public key
+
+						sessionIdIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes
+
+						sessionId := packetData[sessionIdIndex : sessionIdIndex + core.SessionIdBytes]
+
+						if !core.SessionIdEqual(sessionId, clientPublicKey) {
+							fmt.Printf("session id mismatch\n")
+							continue
+						}
+
+						// todo: move this up to the recv thread
+
+						// todo
+						_ = sessionId
+
 						// decrypt packet
 
-						publicKeyIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes
 						sequenceIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes + core.SessionIdBytes
 						encryptedDataIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes + core.SessionIdBytes + core.SequenceBytes
 
-						senderPublicKey := packetData[publicKeyIndex : publicKeyIndex+core.SessionIdBytes]
 						sequenceData := packetData[sequenceIndex : sequenceIndex+core.SequenceBytes]
-						encryptedData := packetData[encryptedDataIndex : packetBytes-core.PittleBytes]
+						encryptedData := packetData[encryptedDataIndex : packetBytes - core.PittleBytes]
 
 						nonce := make([]byte, core.NonceBytes_Box)
 						for i := 0; i < core.SequenceBytes; i++ {
 							nonce[i] = sequenceData[i]
 						}
+						nonce[9] |= (1<<0)
+						nonce[9] &= 1^(1<<1)
 
-						err = core.Decrypt_Box(senderPublicKey, gatewayPrivateKey, nonce, encryptedData, len(encryptedData))
+						err = core.Decrypt_Box(gatewayPublicKey, clientPrivateKey, nonce, encryptedData, len(encryptedData))
 						if err != nil {
 							fmt.Printf("decryption failed\n")
 							continue
@@ -271,30 +286,23 @@ func mainReturnWithCode() int {
 						sequence := uint64(0)
 						core.ReadUint64(sequenceData, &index, &sequence)
 
-						// get challenge token data
-
-						flagsIndex := core.SessionIdBytes + core.SequenceBytes + core.AckBytes + core.AckBitsBytes + core.PacketTypeBytes
-						var challengeTokenData []byte
-						hasChallengeToken := ( header[flagsIndex] & core.Flags_ChallengeToken ) != 0
-						if hasChallengeToken {
-							challengeTokenData = payload[0:core.EncryptedChallengeTokenBytes]
-							payload = payload[core.EncryptedChallengeTokenBytes:]
-						}					
+						// todo: sequence must not be too old
 
 						// process payload packet
 
 						fmt.Printf("payload is %d bytes\n", len(payload))
-						*/
 
-						// ==============================================================
+						if len(payload) != core.MinPayloadBytes {
+							panic("incorrect payload bytes")
+						}
 
-						// todo: sequence must not be too old
-
-						// todo: decrypt packet must succeed
+						for i := 0; i < len(payload); i++ {
+							if payload[i] != byte(i) {
+								panic(fmt.Sprintf("payload data mismatch at index %d. expected %d, got %d\n", i, byte(i), payload[i]))
+							}
+						}
 
 						hasChallengeToken = false
-
-						// todo: process payload packet
 
 					case core.ChallengePacket:
 						

@@ -534,18 +534,25 @@ func mainReturnWithCode() int {
 						continue
 					}
 
+					if packetData[1] != core.PayloadPacket {
+						fmt.Printf("unknown internal packet type: %d\n", packetData[1])
+						continue
+					}
+
 					// read the client address the packet should be forwarded to
 
-					index := core.VersionBytes
+					index := core.VersionBytes + core.PacketTypeBytes
 					var clientAddress net.UDPAddr
 					core.ReadAddress(packetData, &index, &clientAddress)
 
 					// split the packet apart into sections
 
-					headerIndex := core.VersionBytes + core.AddressBytes
+					headerIndex := core.VersionBytes + core.PacketTypeBytes + core.AddressBytes
 
 					payloadIndex := headerIndex + core.HeaderBytes
 					payloadBytes := len(packetData) - payloadIndex
+
+					fmt.Printf("payload bytes is %d\n", payloadBytes)
 
 					header := packetData[headerIndex:headerIndex+core.HeaderBytes]
 					payload := packetData[payloadIndex:payloadIndex+payloadBytes]
@@ -558,11 +565,12 @@ func mainReturnWithCode() int {
 
 					version := byte(0)
 
+					encryptStart := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes + core.SessionIdBytes + core.SequenceBytes
+
 					core.WriteUint8(forwardPacketData, &index, version)
 					core.WriteUint8(forwardPacketData, &index, core.PayloadPacket)
 					chonkle := forwardPacketData[index:index+core.ChonkleBytes]
 					index += core.ChonkleBytes
-					encryptStart := index
 					core.WriteBytes(forwardPacketData, &index, header, core.HeaderBytes)
 					core.WriteBytes(forwardPacketData, &index, payload, payloadBytes)
 					encryptFinish := index
@@ -577,7 +585,14 @@ func mainReturnWithCode() int {
 
 					sessionId := header[:core.SessionIdBytes]
 
+					fmt.Printf("session id is %s\n", core.SessionIdString(sessionId))
+
 					sequenceData := header[core.SessionIdBytes:core.SessionIdBytes+core.SequenceBytes]
+
+					index = 0
+					sequence := uint64(0)
+					core.ReadUint64(sequenceData, &index, &sequence)
+					fmt.Printf("sequence is %d\n", sequence)
 
 					nonce := make([]byte, core.NonceBytes_Box)
 					for i := 0; i < core.SequenceBytes; i++ {
@@ -586,7 +601,7 @@ func mainReturnWithCode() int {
 					nonce[9] |= (1<<0)
 					nonce[9] &= 1^(1<<1)
 
-					core.Encrypt_Box(gatewayPrivateKey, sessionId, nonce, packetData[encryptStart:encryptFinish], encryptFinish-encryptStart)
+					core.Encrypt_Box(gatewayPrivateKey, sessionId, nonce, forwardPacketData[encryptStart:encryptFinish], encryptFinish-encryptStart)
 
 					// setup packet prefix and postfix
 
