@@ -24,6 +24,8 @@ DONE
 
 	Print out acked packets on the client as they are acked.
 
+	Acks work on the client.
+
 TODO
 
 	------------
@@ -61,4 +63,3 @@ TODO
 	o_O
 
 	------------
-	
