@@ -102,7 +102,7 @@ func mainReturnWithCode() int {
 	challengeTokenSequence := uint64(0)
 	challengeTokenExpireTimestamp := uint64(0)
 
-	sendSequence := uint64(1) + uint64(rand.Intn(10000))
+	sendSequence := uint64(10000) + uint64(rand.Intn(10000))
 	receiveSequence := uint64(0)
 	ack := uint64(0)
 	ack_bits := [32]byte{}
