@@ -355,6 +355,7 @@ func mainReturnWithCode() int {
 
 						for i := range acks {
 							fmt.Printf("ack %d\n", acks[i])
+							ackedPackets[acks[i]%SequenceBufferSize] = acks[i]
 						}
 
 						// clear challenge token

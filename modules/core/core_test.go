@@ -162,6 +162,7 @@ func TestBasicPacketFilter(t *testing.T) {
 func TestAdvancedPacketFilter(t *testing.T) {
 
 	t.Parallel()
+
 	rand.Seed(42)
 	var output [1500]byte
 	iterations := 10000

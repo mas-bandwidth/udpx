@@ -699,14 +699,18 @@ func ProcessAcks(ackSequence uint64, ack_bits []byte, ackedPackets []uint64, ack
 	for i := uint64(0); i < totalBits; i++ {
 		byteIndex := i / 8
 		bitIndex := i % 8
-		if ack_bits[byteIndex] & (1<<bitIndex) {
+		if ( ack_bits[byteIndex] & (1<<bitIndex) ) != 0 {
 			ack[i] = 1
 		}
 	}
+	bufferSize := uint64(len(ackedPackets))
+	numAcks := 0
 	for i := uint64(0); i < totalBits; i++ {
 		sequence := ackSequence - i
-		if ack[i] == 1 && {
+		if ack[i] == 1 && ackedPackets[sequence%bufferSize] != sequence {
+			ackBuffer[numAcks] = sequence
+			numAcks++
 		}
 	}
-	return ackBuffer[:0]
+	return ackBuffer[:numAcks]
 }

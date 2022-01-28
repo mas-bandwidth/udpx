@@ -53,3 +53,12 @@ TODO
 	Make the client, server and gateway run with super clean logs.
 
 	------------ 	
+
+	Are all my slices off by one, eg. header := packetData[headerIndex:headerIndex+HeaderBytes]?
+
+	is it actually HeaderBytes - 1?
+
+	o_O
+
+	------------
+	
