@@ -109,10 +109,9 @@ func mainReturnWithCode() int {
 
 	packetReceiveQueue := make(chan []byte)
 
-	ackedPackets := make([]uint64, SequenceBufferSize)
+	ackBuffer := make([]uint64, SequenceBufferSize)
 
-	// todo
-	_ = ackedPackets
+	ackedPackets := make([]uint64, SequenceBufferSize)
 
     // create client socket
 
@@ -349,6 +348,14 @@ func mainReturnWithCode() int {
 							packet_ack_bits[29],
 							packet_ack_bits[30],
 							packet_ack_bits[31])
+
+						// process acks
+
+						acks := core.ProcessAcks(packet_ack, packet_ack_bits[:], ackedPackets[:], ackBuffer[:])						
+
+						for i := range acks {
+							fmt.Printf("ack %d\n", acks[i])
+						}
 
 						// clear challenge token
 

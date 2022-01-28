@@ -20,11 +20,11 @@ DONE
 
 TODO
 
-	Store acked packets in a sequence buffer on client.
-
 	Write function to decode ack bitfield to actual acked packets, returning an array of newly acked packets.
 
-	Print out acked packets on the client as they are seen.
+	Store acked packets in a sequence buffer on client.
+
+	Print out acked packets on the client as they are acked.
 
 	------------
 

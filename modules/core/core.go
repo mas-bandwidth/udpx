@@ -697,5 +697,5 @@ func GetAckBits(latestReceivedSequence uint64, receivedPackets []uint64, ack_bit
 }
 
 func ProcessAcks(ackSequence uint64, ack_bits []byte, ackedPackets []uint64, ackBuffer []uint64) []uint64 {
-	return nil
+	return ackBuffer[:0]
 }
