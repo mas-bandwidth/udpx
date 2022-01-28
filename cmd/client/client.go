@@ -47,6 +47,7 @@ import (
 
 const MaxPacketSize = 1500
 const OldSequenceThreshold = 100
+const SequenceBufferSize = 1024
 
 func main() {
 	os.Exit(mainReturnWithCode())
@@ -106,11 +107,16 @@ func mainReturnWithCode() int {
 	ack := uint64(0)
 	ack_bits := [32]byte{}
 
+	packetReceiveQueue := make(chan []byte)
+
+	ackedPackets := make([]uint64, SequenceBufferSize)
+
+	// todo
+	_ = ackedPackets
+
     // create client socket
 
 	lc := net.ListenConfig{}
-
-	receivedPackets := make(chan []byte)
 
 	go func() {
 
@@ -189,7 +195,7 @@ func mainReturnWithCode() int {
 
 				packetData = packetData[:packetBytes]
 
-				receivedPackets <- packetData
+				packetReceiveQueue <- packetData
 			}
 
 		}()
@@ -209,7 +215,7 @@ func mainReturnWithCode() int {
 			quit := false
 			for !quit {
 				select {
-				case packetData := <-receivedPackets:
+				case packetData := <-packetReceiveQueue:
 
 					packetType := packetData[core.VersionBytes]
 

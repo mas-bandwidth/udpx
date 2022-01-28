@@ -87,7 +87,7 @@ func TestChonkle(t *testing.T) {
 		fromPort := uint16(i + 1000000)
 		toPort := uint16(i + 5000)
 		packetLength := 18 + (i % (len(output) - 18))
-		GenerateChonkle(output[1:], magic[:], fromAddress[:], fromPort, toAddress[:], toPort, packetLength)
+		GenerateChonkle(output[2:], magic[:], fromAddress[:], fromPort, toAddress[:], toPort, packetLength)
 		assert.Equal(t, true, BasicPacketFilter(output[:], packetLength))
 	}
 }
@@ -125,10 +125,9 @@ func TestABI(t *testing.T) {
 func TestPittleAndChonkle(t *testing.T) {
 
 	t.Parallel()
-
+	extra := VersionBytes + PacketTypeBytes + ChonkleBytes + PittleBytes
 	rand.Seed(42)
 	var output [1500]byte
-	output[0] = 1
 	for i := 0; i < 10000; i++ {
 		var magic [8]byte
 		var fromAddress [4]byte
@@ -138,9 +137,9 @@ func TestPittleAndChonkle(t *testing.T) {
 		randomBytes(toAddress[:])
 		fromPort := uint16(i + 1000000)
 		toPort := uint16(i + 5000)
-		packetLength := 18 + (i % (len(output) - 18))
-		GenerateChonkle(output[1:], magic[:], fromAddress[:], fromPort, toAddress[:], toPort, packetLength)
-		GeneratePittle(output[packetLength-2:], fromAddress[:], fromPort, toAddress[:], toPort, packetLength)
+		packetLength := extra + (i % (len(output) - extra))
+		GenerateChonkle(output[VersionBytes+PacketTypeBytes:], magic[:], fromAddress[:], fromPort, toAddress[:], toPort, packetLength)
+		GeneratePittle(output[packetLength-PittleBytes:], fromAddress[:], fromPort, toAddress[:], toPort, packetLength)
 		assert.Equal(t, true, BasicPacketFilter(output[:], packetLength))
 		assert.Equal(t, true, AdvancedPacketFilter(output[:], magic[:], fromAddress[:], fromPort, toAddress[:], toPort, packetLength))
 	}
@@ -160,10 +159,9 @@ func TestBasicPacketFilter(t *testing.T) {
 	}
 }
 
-func TestAdvancedBasicPacketFilter(t *testing.T) {
+func TestAdvancedPacketFilter(t *testing.T) {
 
 	t.Parallel()
-
 	rand.Seed(42)
 	var output [1500]byte
 	iterations := 10000
