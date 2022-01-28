@@ -297,6 +297,55 @@ func mainReturnWithCode() int {
 							}
 						}
 
+						// update reliability
+
+						packet_sequence := uint64(0)
+						packet_ack := uint64(0)
+						packet_ack_bits := [core.AckBitsBytes]byte{}
+
+						index = core.SessionIdBytes
+						core.ReadUint64(header, &index, &packet_sequence)
+						core.ReadUint64(header, &index, &packet_ack)
+						core.ReadBytes(header, &index, packet_ack_bits[:], core.AckBitsBytes)
+
+						fmt.Printf("packet sequence = %d\n", packet_sequence)
+						fmt.Printf("packet ack = %d\n", packet_ack)
+						fmt.Printf("packet ack_bits = [%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x\n", 
+							packet_ack_bits[0],
+							packet_ack_bits[1],
+							packet_ack_bits[2],
+							packet_ack_bits[3],
+							packet_ack_bits[4],
+							packet_ack_bits[5],
+							packet_ack_bits[6],
+							packet_ack_bits[7],
+							packet_ack_bits[8],
+							packet_ack_bits[9],
+							packet_ack_bits[10],
+							packet_ack_bits[11],
+							packet_ack_bits[12],
+							packet_ack_bits[13],
+							packet_ack_bits[14],
+							packet_ack_bits[15],
+							packet_ack_bits[16],
+							packet_ack_bits[17],
+							packet_ack_bits[18],
+							packet_ack_bits[19],
+							packet_ack_bits[20],
+							packet_ack_bits[21],
+							packet_ack_bits[22],
+							packet_ack_bits[23],
+							packet_ack_bits[24],
+							packet_ack_bits[25],
+							packet_ack_bits[26],
+							packet_ack_bits[27],
+							packet_ack_bits[28],
+							packet_ack_bits[29],
+							packet_ack_bits[30],
+							packet_ack_bits[31])
+
+						// clear challenge token
+
 						hasChallengeToken = false
 
 					case core.ChallengePacket:

@@ -687,6 +687,11 @@ func GetAckBits(latestReceivedSequence uint64, receivedPackets []uint64, ack_bit
 		}
 		i++
 	}
-	// todo: convert ack array to ack_bits
-	_ = ack
+	for i := uint64(0); i < totalBits; i++ {
+		if ack[i] == 1 {
+			byteIndex := i / 8
+			bitIndex := i % 8
+			ack_bits[byteIndex] |= (1<<bitIndex)
+		}
+	}
 }

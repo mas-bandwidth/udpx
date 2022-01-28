@@ -14,15 +14,42 @@ DONE
 
 	Extend the gateway to have a smaller sequence buffer (100 entries?) to drop packets already received.
 
-TODO
-
 	Extend GetAckBits to actually return ack bitfield
 
 	Verify on client the ack bitfield comes down.
 
+TODO
+
 	Store acked packets in a sequence buffer on client.
 
-	Write function to decode ack bitfield to actual acked packets.
+	Write function to decode ack bitfield to actual acked packets, returning an array of newly acked packets.
 
+	Print out acked packets on the client as they are seen.
 
+	------------
+
+	Now flip it around, and the client needs to generate ack sequence and ack bits from its own received sequence and received packets buffer.
+
+	Server should see the ack bits coming in from the client.
+
+	Server should now run the same ack logic to determine acks and print out acked packets.
+
+	------------
+
+	Add tests for the get ack bits function
+
+	Add tests for the process acks function
+
+	------------
+
+	Now at this point we have a reliability system that can scale wide.
+
+	It's time to clean up code and what is printed on the client, server and gateway.
+
+	Uniformly convert to core logs. Remove printfs.
+
+	Decide what should be warnings, errors, debug and logs.
 	
+	Make the client, server and gateway run with super clean logs.
+
+	------------ 	

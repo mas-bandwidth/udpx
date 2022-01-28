@@ -284,6 +284,46 @@ func mainReturnWithCode() int {
 
 				core.GetAckBits(sessionEntry.ReceiveSequence, sessionEntry.ReceivedPackets[:], send_ack_bits[:])
 
+				// todo: debug stuff
+				
+				fmt.Printf("packet sequence = %d\n", send_sequence)
+				fmt.Printf("packet ack = %d\n", send_ack)
+				fmt.Printf("packet ack_bits = [%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x\n", 
+					send_ack_bits[0],
+					send_ack_bits[1],
+					send_ack_bits[2],
+					send_ack_bits[3],
+					send_ack_bits[4],
+					send_ack_bits[5],
+					send_ack_bits[6],
+					send_ack_bits[7],
+					send_ack_bits[8],
+					send_ack_bits[9],
+					send_ack_bits[10],
+					send_ack_bits[11],
+					send_ack_bits[12],
+					send_ack_bits[13],
+					send_ack_bits[14],
+					send_ack_bits[15],
+					send_ack_bits[16],
+					send_ack_bits[17],
+					send_ack_bits[18],
+					send_ack_bits[19],
+					send_ack_bits[20],
+					send_ack_bits[21],
+					send_ack_bits[22],
+					send_ack_bits[23],
+					send_ack_bits[24],
+					send_ack_bits[25],
+					send_ack_bits[26],
+					send_ack_bits[27],
+					send_ack_bits[28],
+					send_ack_bits[29],
+					send_ack_bits[30],
+					send_ack_bits[31])
+
+				// ------------------
+
 				sessionEntry.SendSequence++
 
 				core.WriteUint8(responsePacketData, &index, version)
