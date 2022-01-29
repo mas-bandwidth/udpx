@@ -44,18 +44,24 @@ TODO
 
 	It's time to clean up... 
 
-	Clean up code and constants across client/gateway/server/core
+	Uniformly convert to core logs. Remove printfs.
 
-	Clean up what is printed on the client, server and gateway.
+	Decide what should be warnings, errors, debug and logs.
+
+	Make the client, server and gateway run with super clean logs.
+
+	------------
 
 	Add tests for the get ack bits function
 
 	Add tests for the process acks function
 
-	Uniformly convert to core logs. Remove printfs.
+	------------
 
-	Decide what should be warnings, errors, debug and logs.
-	
-	Make the client, server and gateway run with super clean logs.
+	Clean up code and constants across client/gateway/server/core
+
+	------------
+
+	Think about what should be made configurable in the gateway and server that currently isn't.
 
 	------------

@@ -160,6 +160,10 @@ func Debug(s string, params ...interface{}) {
 	}
 }
 
+func Info(s string, params ...interface{}) {
+	fmt.Printf(s+"\n", params...)
+}
+
 const (
 	IPAddressNone = 0
 	IPAddressIPv4 = 1

@@ -57,9 +57,9 @@ func mainReturnWithCode() int {
 
 	serviceName := "udpx client"
 
-	fmt.Printf("%s\n", serviceName)
+	core.Info("%s", serviceName)
 
-	ctx, ctxCancelFunc := context.WithCancel(context.Background())
+	// configure
 
 	readBuffer, err := envvar.GetInt("READ_BUFFER", 100000)
 	if err != nil {
@@ -89,7 +89,7 @@ func mainReturnWithCode() int {
 
 	gatewayPublicKey, err := envvar.GetBase64("GATEWAY_PUBLIC_KEY", nil)
 	if err != nil || len(gatewayPublicKey) != core.PublicKeyBytes_Box {
-		core.Error("missing or invalid GATEWAY_PUBLIC_KEY: %v\n", err)
+		core.Error("missing or invalid GATEWAY_PUBLIC_KEY: %v", err)
 		return 1
 	}
 
@@ -97,6 +97,15 @@ func mainReturnWithCode() int {
 
 	sessionId := clientPublicKey
 
+	if len(sessionId) != core.SessionIdBytes {
+		panic(fmt.Sprintf("public key must be %d bytes", core.SessionIdBytes))
+	}
+
+	core.Info("session id is %s", core.SessionIdString(sessionId))
+
+	// setup
+
+	connectedToServer := false
 	hasChallengeToken := false
 	challengeTokenData := [core.EncryptedChallengeTokenBytes]byte{}
 	challengeTokenSequence := uint64(0)
@@ -114,6 +123,8 @@ func mainReturnWithCode() int {
     // create client socket
 
 	lc := net.ListenConfig{}
+
+	ctx, ctxCancelFunc := context.WithCancel(context.Background())
 
 	go func() {
 
@@ -143,34 +154,34 @@ func mainReturnWithCode() int {
 
 				packetBytes, from, err := conn.ReadFromUDP(packetData)
 				if err != nil {
-					core.Error("failed to read udp packet: %v", err)
+					core.Debug("failed to read udp packet: %v", err)
 					break
 				}
 
 				if !core.AddressEqual(from, gatewayAddress) {
-					fmt.Printf("packet is not from gateway\n")
+					core.Debug("packet is not from gateway")
 					continue
 				}
 
 				if packetBytes < core.PrefixBytes {
-					fmt.Printf("packet is too small\n")
+					core.Debug("packet is too small")
 					continue
 				}
 
 				if packetData[0] != 0 {
-					fmt.Printf("unknown packet version: %d\n", packetData[0])
+					core.Debug("unknown packet version: %d", packetData[0])
 					continue
 				}
 
 				if packetData[1] != core.PayloadPacket && packetData[1] != core.ChallengePacket {
-					fmt.Printf("unknown packet type %d\n", packetData[1])
+					core.Debug("unknown packet type %d", packetData[1])
 					continue
 				}
 
 				// packet filter
 
 				if !core.BasicPacketFilter(packetData, packetBytes) {
-					fmt.Printf("basic packet filter failed\n")
+					core.Debug("basic packet filter failed")
 					continue
 				}
 
@@ -186,7 +197,7 @@ func mainReturnWithCode() int {
 				core.GetAddressData(clientAddress, toAddressData[:], &toAddressPort)
 
 				if !core.AdvancedPacketFilter(packetData, magic[:], fromAddressData[:], fromAddressPort, toAddressData[:], toAddressPort, packetBytes) {
-					fmt.Printf("advanced packet filter failed\n")
+					core.Debug("advanced packet filter failed")
 					continue
 				}
 
@@ -198,12 +209,6 @@ func mainReturnWithCode() int {
 		}()
 
 		// main loop
-
-		if len(sessionId) != core.SessionIdBytes {
-			panic(fmt.Sprintf("public key must be %d bytes", core.SessionIdBytes))
-		}
-
-		_ = clientPrivateKey
 
 		for {
 
@@ -222,7 +227,7 @@ func mainReturnWithCode() int {
 
 					case core.PayloadPacket:
 
-						fmt.Printf("received %d byte payload packet from gateway\n", len(packetData))
+						core.Debug("received %d byte payload packet from gateway", len(packetData))
 
 						// session id must match client public key
 
@@ -231,7 +236,7 @@ func mainReturnWithCode() int {
 						sessionId := packetData[sessionIdIndex : sessionIdIndex + core.SessionIdBytes]
 
 						if !core.SessionIdEqual(sessionId, clientPublicKey) {
-							fmt.Printf("session id mismatch\n")
+							core.Debug("session id mismatch")
 							continue
 						}
 
@@ -252,7 +257,7 @@ func mainReturnWithCode() int {
 
 						err = core.Decrypt_Box(gatewayPublicKey, clientPrivateKey, nonce, encryptedData, len(encryptedData))
 						if err != nil {
-							fmt.Printf("decryption failed\n")
+							core.Debug("could not decrypt payload packet")
 							continue
 						}
 
@@ -271,7 +276,7 @@ func mainReturnWithCode() int {
 
 						packetType := header[core.SessionIdBytes+core.SequenceBytes+core.AckBytes+core.AckBitsBytes]
 						if packetType != core.PayloadPacket {
-							fmt.Printf("unknown packet type: %d\n", packetType)
+							core.Debug("packet type mismatch: %d", packetType)
 							continue
 						}
 
@@ -282,7 +287,7 @@ func mainReturnWithCode() int {
 						core.ReadUint64(sequenceData, &index, &sequence)
 
 						if receiveSequence > OldSequenceThreshold && sequence < receiveSequence - OldSequenceThreshold {
-							fmt.Printf("packet sequence is too old: %d\n", sequence)
+							core.Debug("packet sequence is too old: %d", sequence)
 							continue
 						}
 
@@ -294,8 +299,10 @@ func mainReturnWithCode() int {
 
 						// process payload packet
 
-						fmt.Printf("payload is %d bytes\n", len(payload))
+						core.Debug("payload is %d bytes\n", len(payload))
 
+						// -------------------------
+						// todo: call function to process payload
 						if len(payload) != core.MinPayloadBytes {
 							panic("incorrect payload bytes")
 						}
@@ -305,6 +312,8 @@ func mainReturnWithCode() int {
 								panic(fmt.Sprintf("payload data mismatch at index %d. expected %d, got %d\n", i, byte(i), payload[i]))
 							}
 						}
+						// todo end
+						// -------------------------
 
 						// update reliability
 
@@ -317,9 +326,9 @@ func mainReturnWithCode() int {
 						core.ReadUint64(header, &index, &packet_ack)
 						core.ReadBytes(header, &index, packet_ack_bits[:], core.AckBitsBytes)
 
-						fmt.Printf("recv packet sequence = %d\n", packet_sequence)
-						fmt.Printf("recv packet ack = %d\n", packet_ack)
-						fmt.Printf("recv packet ack_bits = [%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x\n", 
+						core.Debug("recv packet sequence = %d", packet_sequence)
+						core.Debug("recv packet ack = %d", packet_ack)
+						core.Debug("recv packet ack_bits = [%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x", 
 							packet_ack_bits[0],
 							packet_ack_bits[1],
 							packet_ack_bits[2],
@@ -358,20 +367,24 @@ func mainReturnWithCode() int {
 						acks := core.ProcessAcks(packet_ack, packet_ack_bits[:], ackedPackets[:], ackBuffer[:])						
 
 						for i := range acks {
-							fmt.Printf("ack %d\n", acks[i])
+							core.Debug("ack %d", acks[i])
 							ackedPackets[acks[i]%SequenceBufferSize] = acks[i]
 						}
 
 						// clear challenge token
 
-						hasChallengeToken = false
+						if hasChallengeToken {
+							core.Info("connected")
+							hasChallengeToken = false
+							connectedToServer = true
+						}
 
 					case core.ChallengePacket:
 						
-						fmt.Printf("received %d byte challenge packet from gateway\n", len(packetData))
+						core.Debug("received %d byte challenge packet from gateway", len(packetData))
 						
 						if len(packetData) != 142 {
-							fmt.Printf("bad challenge packet size: %d\n", len(packetData))
+							core.Debug("bad challenge packet size: %d", len(packetData))
 							continue
 						}
 
@@ -385,7 +398,7 @@ func mainReturnWithCode() int {
 
 						err = core.Decrypt_Box(gatewayPublicKey, clientPrivateKey, nonce, encryptedData, len(encryptedData) - core.PittleBytes)
 						if err != nil {
-							fmt.Printf("challenge packet decryption failed\n")
+							core.Debug("could not decrypt challenge packet")
 							continue
 						}
 
@@ -396,11 +409,15 @@ func mainReturnWithCode() int {
 						core.ReadUint64(packetData, &index, &packetChallengeSequence)
 						
 						if !hasChallengeToken || challengeTokenSequence < packetChallengeSequence {
-							fmt.Printf("*** updated challenge token: %d ***\n", packetChallengeSequence)
+							if connectedToServer {
+								core.Info("reconnecting")								
+								connectedToServer = false
+							}
 							hasChallengeToken = true
 							copy(challengeTokenData[:], packetChallengeTokenData)
 							challengeTokenSequence = packetChallengeSequence
 							challengeTokenExpireTimestamp = uint64(time.Now().Unix()) + 2
+							core.Debug("updated challenge token: %d", packetChallengeSequence)
 						}
 					}
 
@@ -426,9 +443,9 @@ func mainReturnWithCode() int {
 
 			index := 0
 
-			fmt.Printf("send packet sequence = %d\n", sendSequence)
-			fmt.Printf("send packet ack = %d\n", receiveSequence)
-			fmt.Printf("send packet ack_bits = [%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x\n", 
+			core.Debug("send packet sequence = %d", sendSequence)
+			core.Debug("send packet ack = %d", receiveSequence)
+			core.Debug("send packet ack_bits = [%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x", 
 				ack_bits[0],
 				ack_bits[1],
 				ack_bits[2],
@@ -522,12 +539,12 @@ func mainReturnWithCode() int {
 				core.Error("failed to write udp packet: %v", err)
 			}
 
-			fmt.Printf("sent %d byte packet to %s\n", len(packetData), gatewayAddress)
+			core.Debug("sent %d byte packet to %s", len(packetData), gatewayAddress)
 
 			// time out the challenge token if it's too old
 
 			if hasChallengeToken && challengeTokenExpireTimestamp <= uint64(time.Now().Unix()) {
-				fmt.Printf("*** timed out challenge token ***\n")
+				core.Debug("timed out challenge token")
 				hasChallengeToken = false
 			}
 
@@ -540,20 +557,20 @@ func mainReturnWithCode() int {
 
 	}()
 
-	fmt.Printf("started udp client on port %s\n", udpPort)
+	core.Info("started client on port %s", udpPort)
 
-	fmt.Printf("gateway address is %s\n", gatewayAddress)
+	core.Info("connecting to %s", gatewayAddress)
 
 	// Wait for shutdown signal
 	termChan := make(chan os.Signal, 1)
 	signal.Notify(termChan, os.Interrupt, syscall.SIGTERM)
 	<-termChan
 
-	fmt.Println("\nshutting down")
+	core.Info("\nshutting down")
 
 	ctxCancelFunc()
 
-	fmt.Println("shutdown completed")
+	core.Info("shutdown completed")
 
 	return 0
 }
