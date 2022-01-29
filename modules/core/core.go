@@ -144,7 +144,7 @@ func Decrypt_SecretBox(privateKey []byte, nonce []byte, buffer []byte, bytes int
 var debugLogs bool
 
 func init() {
-	value, ok := os.LookupEnv("NEXT_DEBUG_LOGS")
+	value, ok := os.LookupEnv("UDPX_DEBUG_LOGS")
 	if ok && value == "1" {
 		debugLogs = true
 	}
