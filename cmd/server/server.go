@@ -52,12 +52,13 @@ import (
 
 const MaxPacketSize = 1500
 const SessionMapSwapTime = 60
-const ReliabilityBufferSize = 1024
+const SequenceBufferSize = 1024
 
 type SessionEntry struct {
 	SendSequence uint64
 	ReceiveSequence uint64
-	ReceivedPackets [ReliabilityBufferSize]uint64
+	ReceivedPackets [SequenceBufferSize]uint64
+	AckedPackets [SequenceBufferSize]uint64
 }
 
 // Allows us to return an exit code and allows log flushes and deferred functions
@@ -208,6 +209,7 @@ func mainReturnWithCode() int {
 
 				if version != 0 {
 					fmt.Printf("unknown packet version: %d\n", version)
+					continue
 				}
 
 				core.ReadAddress(packetData, &index, &gatewayInternalAddress)
@@ -221,7 +223,49 @@ func mainReturnWithCode() int {
 
 				if packetType != core.PayloadPacket {
 					fmt.Printf("unknown packet type: %d\n", packetType)
+					continue
 				}
+
+				if flags != 0 {
+					fmt.Printf("unknown flags\n")
+					continue
+				}
+
+				fmt.Printf("recv packet sequence = %d\n", sequence)
+				fmt.Printf("recv packet ack = %d\n", ack)
+				fmt.Printf("recv packet ack_bits = [%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x\n", 
+					ack_bits[0],
+					ack_bits[1],
+					ack_bits[2],
+					ack_bits[3],
+					ack_bits[4],
+					ack_bits[5],
+					ack_bits[6],
+					ack_bits[7],
+					ack_bits[8],
+					ack_bits[9],
+					ack_bits[10],
+					ack_bits[11],
+					ack_bits[12],
+					ack_bits[13],
+					ack_bits[14],
+					ack_bits[15],
+					ack_bits[16],
+					ack_bits[17],
+					ack_bits[18],
+					ack_bits[19],
+					ack_bits[20],
+					ack_bits[21],
+					ack_bits[22],
+					ack_bits[23],
+					ack_bits[24],
+					ack_bits[25],
+					ack_bits[26],
+					ack_bits[27],
+					ack_bits[28],
+					ack_bits[29],
+					ack_bits[30],
+					ack_bits[31])
 
 				sessionEntry := sessionMap_New[sessionId]
 				if sessionEntry == nil {
@@ -247,7 +291,7 @@ func mainReturnWithCode() int {
 					sessionEntry.ReceiveSequence = sequence
 				}
 
-				sessionEntry.ReceivedPackets[sequence%ReliabilityBufferSize] = sequence
+				sessionEntry.ReceivedPackets[sequence%SequenceBufferSize] = sequence
 
 				payload := packetData[index:]
 
@@ -262,6 +306,17 @@ func mainReturnWithCode() int {
 					if payload[i] != byte(i) {
 						panic(fmt.Sprintf("payload data mismatch at index %d. expected %d, got %d\n", i, byte(i), payload[i]))
 					}
+				}
+
+				// process acks
+
+				var ackBuffer [SequenceBufferSize]uint64
+
+				acks := core.ProcessAcks(ack, ack_bits[:], sessionEntry.AckedPackets[:], ackBuffer[:])						
+
+				for i := range acks {
+					fmt.Printf("ack %d\n", acks[i])
+					sessionEntry.AckedPackets[acks[i]%SequenceBufferSize] = acks[i]
 				}
 
 				// temporary: dummy response to test server -> gateway -> client packet delivery
@@ -285,10 +340,10 @@ func mainReturnWithCode() int {
 				core.GetAckBits(sessionEntry.ReceiveSequence, sessionEntry.ReceivedPackets[:], send_ack_bits[:])
 
 				// todo: debug stuff
-				
-				fmt.Printf("packet sequence = %d\n", send_sequence)
-				fmt.Printf("packet ack = %d\n", send_ack)
-				fmt.Printf("packet ack_bits = [%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x\n", 
+
+				fmt.Printf("send packet sequence = %d\n", send_sequence)
+				fmt.Printf("send packet ack = %d\n", send_ack)
+				fmt.Printf("send packet ack_bits = [%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x\n", 
 					send_ack_bits[0],
 					send_ack_bits[1],
 					send_ack_bits[2],

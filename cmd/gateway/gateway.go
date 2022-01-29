@@ -324,7 +324,11 @@ func mainReturnWithCode() int {
 					if hasChallengeToken {
 						challengeTokenData = payload[0:core.EncryptedChallengeTokenBytes]
 						payload = payload[core.EncryptedChallengeTokenBytes:]
-					}					
+					}				
+
+					// clear flags in header
+
+					header[flagsIndex] = 0	
 
 					// process payload packet
 

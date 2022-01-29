@@ -26,13 +26,17 @@ DONE
 
 	Acks work on the client.
 
+	Now flip it around, and the client needs to generate ack sequence and ack bits from its own received sequence and received packets buffer.
+
+	Verify client is sending correct ack sequence and ack bits via logs.
+
+	Server should see the ack bits coming in from the client.
+
+	Verify with logs on server.
+
 TODO
 
 	------------
-
-	Now flip it around, and the client needs to generate ack sequence and ack bits from its own received sequence and received packets buffer.
-
-	Server should see the ack bits coming in from the client.
 
 	Server should now run the same ack logic to determine acks and print out acked packets.
 
