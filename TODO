@@ -62,4 +62,7 @@ TODO
 	Server also needs the concept of payload id and payload acks
 
 	------------
-	
+
+	Probably a good idea to formalize a new "id" section of the packet, eg. prefix, id, header, payload, postfix.
+
+	------------
