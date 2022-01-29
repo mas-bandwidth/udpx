@@ -75,7 +75,7 @@ const NonceBytes_SecretBox = 24
 const HMACBytes_SecretBox = 16
 
 const PrefixBytes = VersionBytes + PacketTypeBytes + ChonkleBytes
-const HeaderBytes = SessionIdBytes + SequenceBytes + AckBytes + AckBitsBytes + PacketTypeBytes + FlagsBytes
+const HeaderBytes = SessionIdBytes + GatewayIdBytes + ServerIdBytes + SequenceBytes + AckBytes + AckBitsBytes + PacketTypeBytes + FlagsBytes
 const PostfixBytes = HMACBytes_Box + PittleBytes
 const MinPayloadBytes = 1000
 const MinPacketSize = PrefixBytes + HeaderBytes + MinPayloadBytes + PostfixBytes
@@ -590,8 +590,11 @@ func AddressEqual(a *net.UDPAddr, b *net.UDPAddr) bool {
 	return net.IP.Equal(a.IP, b.IP) && a.Port == b.Port
 }
 
-func SessionIdEqual(a []byte, b []byte) bool {
-	for i := 0; i < SessionIdBytes; i++ {
+func IdEqual(a []byte, b []byte) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := 0; i < len(a); i++ {
 		if a[i] != b[i] {
 			return false
 		}

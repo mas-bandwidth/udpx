@@ -102,6 +102,9 @@ func mainReturnWithCode() int {
 		panic(fmt.Sprintf("public key must be %d bytes", core.SessionIdBytes))
 	}
 
+	var gatewayId [core.GatewayIdBytes]byte
+	var serverId [core.ServerIdBytes]byte
+
 	core.Info("session id is %s", core.IdString(sessionId))
 
 	// setup
@@ -210,11 +213,15 @@ func mainReturnWithCode() int {
 						ack_bits[30],
 						ack_bits[31])
 
+					// todo: reading and writing to gateway id and server id from different threads = no no no
+
 					core.WriteUint8(packetData, &index, version)
 					core.WriteUint8(packetData, &index, core.PayloadPacket)
 					chonkle := packetData[index : index+core.ChonkleBytes]
 					index += core.ChonkleBytes
 					core.WriteBytes(packetData, &index, sessionId, core.SessionIdBytes)
+					core.WriteBytes(packetData, &index, gatewayId[:], core.GatewayIdBytes)
+					core.WriteBytes(packetData, &index, serverId[:], core.ServerIdBytes)
 					sequenceData := packetData[index : index+core.SequenceBytes]
 					core.WriteUint64(packetData, &index, sendSequence)
 					encryptStart := index
@@ -371,18 +378,18 @@ func mainReturnWithCode() int {
 
 						// session id must match client public key
 
-						sessionIdIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes
+						sessionIdIndex := core.PrefixBytes
 
 						sessionId := packetData[sessionIdIndex : sessionIdIndex + core.SessionIdBytes]
 
-						if !core.SessionIdEqual(sessionId, clientPublicKey) {
+						if !core.IdEqual(sessionId, clientPublicKey) {
 							core.Debug("session id mismatch")
 							continue
 						}
 
 						// decrypt packet
 
-						sequenceIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes + core.SessionIdBytes
+						sequenceIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes + core.SessionIdBytes + core.GatewayIdBytes + core.ServerIdBytes
 						encryptedDataIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes + core.SessionIdBytes + core.SequenceBytes
 
 						sequenceData := packetData[sequenceIndex : sequenceIndex+core.SequenceBytes]
@@ -501,10 +508,32 @@ func mainReturnWithCode() int {
 							payloadAckQueue <- payloadAck
 						}
 
+						// check if we have a new gateway
+
+						gatewayIdIndex := sessionIdIndex + core.SessionIdBytes
+
+						packetGatewayId := packetData[gatewayIdIndex : gatewayIdIndex + core.GatewayIdBytes]
+
+						if !core.IdEqual(packetGatewayId, gatewayId[:]) {
+							core.Info("connected to gateway %s", core.IdString(packetGatewayId))
+							copy(gatewayId[:], packetGatewayId[:])
+						}
+
+						// check if we have a new server
+
+						serverIdIndex := gatewayIdIndex + core.GatewayIdBytes
+
+						packetServerId := packetData[serverIdIndex : serverIdIndex + core.ServerIdBytes]
+
+						if !core.IdEqual(packetServerId, serverId[:]) {
+							core.Info("connected to server %s", core.IdString(packetServerId))
+							copy(serverId[:], packetServerId[:])
+						}
+
 						// clear challenge token
 
 						if hasChallengeToken {
-							core.Info("connected")
+							core.Debug("cleared challenge token")
 							hasChallengeToken = false
 							connectedToServer = true
 						}
