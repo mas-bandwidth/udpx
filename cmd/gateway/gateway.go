@@ -72,7 +72,7 @@ func mainReturnWithCode() int {
 
 	serviceName := "udpx gateway"
 
-	fmt.Printf("%s\n", serviceName)
+	core.Info("%s", serviceName)
 
 	gatewayAddress, err := envvar.GetAddress("GATEWAY_ADDRESS", core.ParseAddress("127.0.0.1:40000"))
 	if err != nil {
@@ -94,7 +94,7 @@ func mainReturnWithCode() int {
 
 	gatewayPrivateKey, err := envvar.GetBase64("GATEWAY_PRIVATE_KEY", nil)
 	if err != nil || len(gatewayPrivateKey) != core.PrivateKeyBytes_Box {
-		core.Error("missing or invalid GATEWAY_PRIVATE_KEY: %v\n", err)
+		core.Error("missing or invalid GATEWAY_PRIVATE_KEY: %v", err)
 		return 1
 	}
 
@@ -140,7 +140,7 @@ func mainReturnWithCode() int {
 		}
 
 		go func() {
-			fmt.Printf("started http server on port %s\n", httpPort)
+			core.Debug("started http server on port %s\n", httpPort)
 			err := srv.ListenAndServe()
 			if err != nil {
 				core.Error("failed to start http server: %v", err)
@@ -216,7 +216,7 @@ func mainReturnWithCode() int {
 
 					packetBytes, from, err := conn.ReadFromUDP(buffer[:])
 					if err != nil {
-						core.Error("failed to read udp packet: %v", err)
+						core.Debug("failed to read udp packet: %v", err)
 						break
 					}
 
@@ -232,25 +232,25 @@ func mainReturnWithCode() int {
 					}
 
 					if packetBytes < core.MinPacketSize {
-						fmt.Printf("packet is too small\n")
+						core.Debug("packet is too small")
 						continue
 					}
 
 					packetData := buffer[:packetBytes]
 
-					fmt.Printf("recv %d byte packet from %s\n", packetBytes, from)
+					core.Debug("recv %d byte packet from %s", packetBytes, from)
 
 					// drop unknown packet versions
 
 					if packetData[0] != 0 {
-						fmt.Printf("unknown packet version\n")
+						core.Debug("unknown packet version: %d", packetData[0])
 						continue
 					}
 
 					// packet filter
 
 					if !core.BasicPacketFilter(packetData, packetBytes) {
-						fmt.Printf("basic packet filter failed\n")
+						core.Debug("basic packet filter failed")
 						continue
 					}
 
@@ -266,7 +266,7 @@ func mainReturnWithCode() int {
 					core.GetAddressData(gatewayAddress, toAddressData[:], &toAddressPort)
 
 					if !core.AdvancedPacketFilter(packetData, magic[:], fromAddressData[:], fromAddressPort, toAddressData[:], toAddressPort, packetBytes) {
-						fmt.Printf("advanced packet filter failed\n")
+						core.Debug("advanced packet filter failed")
 						continue
 					}
 
@@ -287,11 +287,11 @@ func mainReturnWithCode() int {
 
 					err = core.Decrypt_Box(senderPublicKey, gatewayPrivateKey, nonce, encryptedData, len(encryptedData))
 					if err != nil {
-						fmt.Printf("decryption failed\n")
+						core.Debug("could not decrypt payload packet")
 						continue
 					}
 
-					// split decrypted packet into various pieces
+					// split packet into various pieces
 
 					headerIndex := core.PrefixBytes
 					
@@ -306,7 +306,7 @@ func mainReturnWithCode() int {
 
 					packetType := header[core.SessionIdBytes+core.SequenceBytes+core.AckBytes+core.AckBitsBytes]
 					if packetType != core.PayloadPacket {
-						fmt.Printf("unknown packet type: %d\n", packetType)
+						core.Debug("invalid packet type: %d", packetType)
 						continue
 					}
 
@@ -332,7 +332,7 @@ func mainReturnWithCode() int {
 
 					// process payload packet
 
-					fmt.Printf("payload is %d bytes\n", len(payload))
+					core.Debug("payload is %d bytes", len(payload))
 
 					var sessionId [core.SessionIdBytes]byte
 					for i := 0; i < core.SessionIdBytes; i++ {
@@ -360,17 +360,17 @@ func mainReturnWithCode() int {
 							var challengeToken core.ChallengeToken
 							result := core.ReadEncryptedChallengeToken(challengeTokenData, &index, &challengeToken, challengePrivateKey)
 							if !result {
-								fmt.Printf("challenge token did not decrypt\n")
+								core.Debug("challenge token did not decrypt")
 								continue
 							}
 
 							if challengeToken.ExpireTimestamp <= uint64(time.Now().Unix()) {
-								fmt.Printf("challenge token expired\n")
+								core.Debug("challenge token expired")
 								continue
 							}
 
 							if !core.AddressEqual(&challengeToken.ClientAddress, from) {
-								fmt.Printf("challenge token client address mismatch\n")
+								core.Debug("challenge token client address mismatch")
 								continue
 							}
 
@@ -382,7 +382,7 @@ func mainReturnWithCode() int {
 							sessionEntry := &SessionEntry{ReceivedSequence: challengeToken.Sequence}
 							sessionMap_New[sessionId] = sessionEntry
 
-							fmt.Printf("session %s punched through from %s\n", core.SessionIdString(sessionId[:]), from.String())
+							core.Info("new session %s from %s", core.SessionIdString(sessionId[:]), from.String())
 
 						} else {
 
@@ -452,7 +452,7 @@ func mainReturnWithCode() int {
 								core.Error("failed to send challenge packet to client: %v", err)
 							}
 							
-							fmt.Printf("send %d byte challenge packet to %s\n", len(challengePacketData), from.String())
+							core.Debug("send %d byte challenge packet to %s", len(challengePacketData), from.String())
 
 						}
 						
@@ -474,14 +474,14 @@ func mainReturnWithCode() int {
 					}
 
 					if sequence < oldSequence {
-						fmt.Printf("sequence number is too old: %d\n", sequence)
+						core.Debug("sequence number is too old: %d", sequence)
 						continue
 					}
 
-					// drop payload packets that have already been forwarded to the server
+					// drop packets that have already been forwarded to the server
 
 					if sessionEntry.ReceivedPackets[sequence%OldSequenceThreshold] == sequence {
-						fmt.Printf("packet %d has already been forwarded to the server\n", sequence)
+						core.Debug("packet %d has already been forwarded to the server", sequence)
 					}
 
 					// forward payload packet to server
@@ -505,7 +505,7 @@ func mainReturnWithCode() int {
 						core.Error("failed to forward payload to server: %v", err)
 					}
 
-					fmt.Printf("send %d byte packet to %s\n", forwardPacketBytes, serverAddress.String())
+					core.Debug("send %d byte packet to %s", forwardPacketBytes, serverAddress.String())
 
 					// mark packet as received and forward to server
 
@@ -575,20 +575,20 @@ func mainReturnWithCode() int {
 
 					packetData := buffer[:packetBytes]
 
-					fmt.Printf("recv internal %d byte packet from %s\n", packetBytes, from.String())
+					core.Debug("recv internal %d byte packet from %s", packetBytes, from.String())
 
 					if packetBytes <= core.PacketTypeBytes+core.VersionBytes+core.AddressBytes {
-						fmt.Printf("internal packet is too small\n")
+						core.Debug("internal packet is too small")
 						continue
 					}
 
 					if packetData[0] != 0 {
-						fmt.Printf("unknown internal packet version: %d\n", packetData[0])
+						core.Debug("unknown internal packet version: %d", packetData[0])
 						continue
 					}
 
 					if packetData[1] != core.PayloadPacket {
-						fmt.Printf("unknown internal packet type: %d\n", packetData[1])
+						core.Debug("unknown internal packet type: %d", packetData[1])
 						continue
 					}
 
@@ -605,7 +605,7 @@ func mainReturnWithCode() int {
 					payloadIndex := headerIndex + core.HeaderBytes
 					payloadBytes := len(packetData) - payloadIndex
 
-					fmt.Printf("payload bytes is %d\n", payloadBytes)
+					core.Debug("payload bytes is %d", payloadBytes)
 
 					header := packetData[headerIndex:headerIndex+core.HeaderBytes]
 					payload := packetData[payloadIndex:payloadIndex+payloadBytes]
@@ -638,14 +638,11 @@ func mainReturnWithCode() int {
 
 					sessionId := header[:core.SessionIdBytes]
 
-					fmt.Printf("session id is %s\n", core.SessionIdString(sessionId))
-
 					sequenceData := header[core.SessionIdBytes:core.SessionIdBytes+core.SequenceBytes]
 
 					index = 0
 					sequence := uint64(0)
 					core.ReadUint64(sequenceData, &index, &sequence)
-					fmt.Printf("sequence is %d\n", sequence)
 
 					nonce := make([]byte, core.NonceBytes_Box)
 					for i := 0; i < core.SequenceBytes; i++ {
@@ -686,7 +683,8 @@ func mainReturnWithCode() int {
 					if _, err := publicSocket[thread].WriteToUDP(forwardPacketData, &clientAddress); err != nil {
 						core.Error("failed to forward packet to client: %v", err)
 					}
-					fmt.Printf("send %d byte packet to %s\n", len(forwardPacketData), clientAddress.String())
+
+					core.Debug("send %d byte packet to %s\n", len(forwardPacketData), clientAddress.String())
 				}
 
 				wg.Done()
@@ -697,7 +695,7 @@ func mainReturnWithCode() int {
 
 	// -----------------------------------------------------------------
 
-	fmt.Printf("started udp server on port %s\n", udpPort)
+	core.Info("started server on port %s", udpPort)
 
 	// Wait for shutdown signal
 	termChan := make(chan os.Signal, 1)
