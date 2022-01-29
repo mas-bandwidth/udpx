@@ -34,23 +34,23 @@ DONE
 
 	Verify with logs on server.
 
+	Server should now run the same ack logic to determine acks and print out acked packets.
+
+	Now at this point we have a reliability system that can scale wide.
+
 TODO
 
 	------------
 
-	Server should now run the same ack logic to determine acks and print out acked packets.
+	It's time to clean up... 
 
-	------------
+	Clean up code and constants across client/gateway/server/core
+
+	Clean up what is printed on the client, server and gateway.
 
 	Add tests for the get ack bits function
 
 	Add tests for the process acks function
-
-	------------
-
-	Now at this point we have a reliability system that can scale wide.
-
-	It's time to clean up code and what is printed on the client, server and gateway.
 
 	Uniformly convert to core logs. Remove printfs.
 
