@@ -11,15 +11,11 @@ DONE
 	was exposed to the caller, it would create contention between threads when sending internal packets, 
 	and payload packets on the protocol.
 
-TODO
-
-	------------
-
 	Implement a payload ack channel, and push acks back down to the caller via it.
 
-	------------
-
 	Clean up code across client/gateway/server/core
+
+TODO
 
 	------------
 
@@ -32,3 +28,38 @@ TODO
 	Setup a soak test harness so I can test it with a bunch of clients running at the same time
 
 	------------
+
+	I'd like to know the gateway id and the server id on the client.
+
+	This way the client has some logs that indicate which gateway instance it is connected to.
+
+	And then client session experiences can be tied to the gateway and server instances as it hops around.
+
+	Without this, it will be almost impossible to see what happens to a client session, when debugging something wrong in production across multiple gateways and server instances.
+
+	It seems the easiest way to do this is to extend the payload packet to include the server and gateway ids, when known.
+
+	This also lets the gateway and server do some additional verification to see that this session does in fact belong to them, and do edge detection when a session migrates in from a different gateway, or to a different server instance.
+
+	It seems that this edge detection is important.
+
+	The client also will see that it connects to different gateways and servers as its session goes on.
+
+	------------
+
+	There should be a access token and a way for this token to be refreshed at some period, to maintain connectivity to the system.
+
+	The gateway should just ignore any packets that don't have an up to date access token.
+
+	Access tokens can just be included with every payload packet.
+
+	Potentially, the client can avoid needing to update the access token entirely, if the server backend passes the updated token back down to the client every n seconds, this avoids the need to maintain additional connections.
+
+	This is definitely desirable.
+
+	------------
+
+	Server also needs the concept of payload id and payload acks
+
+	------------
+	

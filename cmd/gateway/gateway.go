@@ -74,6 +74,8 @@ func mainReturnWithCode() int {
 
 	core.Info("%s", serviceName)
 
+	// configure
+
 	gatewayAddress, err := envvar.GetAddress("GATEWAY_ADDRESS", core.ParseAddress("127.0.0.1:40000"))
 	if err != nil {
 		core.Error("invalid GATEWAY_ADDRESS: %v", err)
@@ -117,6 +119,10 @@ func mainReturnWithCode() int {
 	}
 
 	udpPort := envvar.Get("UDP_PORT", "40000")
+
+	gatewayId := core.RandomBytes(core.GatewayIdBytes)
+
+	core.Info("gateway id is %s", core.IdString(gatewayId))
 
 	challengePrivateKey := core.Keygen_SecretBox()
 
@@ -382,7 +388,7 @@ func mainReturnWithCode() int {
 							sessionEntry := &SessionEntry{ReceivedSequence: challengeToken.Sequence}
 							sessionMap_New[sessionId] = sessionEntry
 
-							core.Info("new session %s from %s", core.SessionIdString(sessionId[:]), from.String())
+							core.Info("new session %s from %s", core.IdString(sessionId[:]), from.String())
 
 						} else {
 

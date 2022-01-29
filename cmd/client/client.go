@@ -102,7 +102,7 @@ func mainReturnWithCode() int {
 		panic(fmt.Sprintf("public key must be %d bytes", core.SessionIdBytes))
 	}
 
-	core.Info("session id is %s", core.SessionIdString(sessionId))
+	core.Info("session id is %s", core.IdString(sessionId))
 
 	// setup
 
@@ -495,7 +495,7 @@ func mainReturnWithCode() int {
 						acks := core.ProcessAcks(packet_ack, packet_ack_bits[:], ackedPackets[:], ackBuffer[:])						
 
 						for i := range acks {
-							core.Debug("ack %d", acks[i])
+							core.Debug("ack packet %d", acks[i])
 							ackedPackets[acks[i]%SequenceBufferSize] = acks[i]
 							payloadAck := sequenceToPayloadId[acks[i]%SequenceBufferSize]
 							payloadAckQueue <- payloadAck

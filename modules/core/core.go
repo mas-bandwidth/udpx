@@ -51,6 +51,9 @@ const MagicBytes = 8
 const VersionBytes = 1
 const ChonkleBytes = 15
 const SessionIdBytes = 32
+const GatewayIdBytes = 32
+const ServerIdBytes = 32
+const UserIdBytes = 32
 const SequenceBytes = 8
 const AckBytes = 8
 const AckBitsBytes = 32
@@ -575,40 +578,12 @@ func GetAddressData(address *net.UDPAddr, addressData []byte, addressPort *uint1
 	*addressPort = uint16(address.Port)
 }
 
-func SessionIdString(sessionId []byte) string {
-	return fmt.Sprintf("%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
-		sessionId[0],
-		sessionId[1],
-		sessionId[2],
-		sessionId[3],
-		sessionId[4],
-		sessionId[5],
-		sessionId[6],
-		sessionId[7],
-		sessionId[8],
-		sessionId[9],
-		sessionId[10],
-		sessionId[11],
-		sessionId[12],
-		sessionId[13],
-		sessionId[14],
-		sessionId[15],
-		sessionId[16],
-		sessionId[17],
-		sessionId[18],
-		sessionId[19],
-		sessionId[20],
-		sessionId[21],
-		sessionId[22],
-		sessionId[23],
-		sessionId[24],
-		sessionId[25],
-		sessionId[26],
-		sessionId[27],
-		sessionId[28],
-		sessionId[29],
-		sessionId[30],
-		sessionId[31])
+func IdString(id []byte) string {
+	string := ""
+	for i := 0; i < len(id); i++ {
+		string = string + fmt.Sprintf("%02x", id[i])
+	}
+	return string
 }
 
 func AddressEqual(a *net.UDPAddr, b *net.UDPAddr) bool {

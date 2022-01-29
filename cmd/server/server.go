@@ -73,6 +73,12 @@ func mainReturnWithCode() int {
 
 	core.Info("%s", serviceName)
 
+	// configure
+
+	serverId := core.RandomBytes(core.ServerIdBytes)
+
+	core.Info("server id is %s", core.IdString(serverId))
+
 	ctx, ctxCancelFunc := context.WithCancel(context.Background())
 
 	// Start HTTP server
@@ -274,7 +280,7 @@ func mainReturnWithCode() int {
 						// add new session entry
 						sessionEntry = &SessionEntry{SendSequence: ack+10000, ReceiveSequence: sequence}
 						sessionMap_New[sessionId] = sessionEntry
-						core.Info("new session %s from %s", core.SessionIdString(sessionId[:]), clientAddress.String())
+						core.Info("new session %s from %s", core.IdString(sessionId[:]), clientAddress.String())
 					} else {
 						// migrate old -> new session map
 						sessionMap_New[sessionId] = sessionEntry
@@ -294,20 +300,20 @@ func mainReturnWithCode() int {
 
 				payload := packetData[index:]
 
-				core.Debug("received packet %d from %s with %d byte payload", sequence, core.SessionIdString(sessionId[:]), len(payload))
+				core.Debug("received packet %d from %s with %d byte payload", sequence, core.IdString(sessionId[:]), len(payload))
 
-				// -----------------------
-				// todo: function to process payload
-				if len(payload) != core.MinPayloadBytes {
-					panic(fmt.Sprintf("payload size mismatch. expected %d, got %d\n", core.MinPayloadBytes, len(payload)))
-				}
+				// todo: channel for payload
+				{
+					if len(payload) != core.MinPayloadBytes {
+						panic(fmt.Sprintf("payload size mismatch. expected %d, got %d\n", core.MinPayloadBytes, len(payload)))
+					}
 
-				for i := 0; i < core.MinPayloadBytes; i++ {
-					if payload[i] != byte(i) {
-						panic(fmt.Sprintf("payload data mismatch at index %d. expected %d, got %d\n", i, byte(i), payload[i]))
+					for i := 0; i < core.MinPayloadBytes; i++ {
+						if payload[i] != byte(i) {
+							panic(fmt.Sprintf("payload data mismatch at index %d. expected %d, got %d\n", i, byte(i), payload[i]))
+						}
 					}
 				}
-				// -----------------------
 
 				// process acks
 
@@ -316,7 +322,7 @@ func mainReturnWithCode() int {
 				acks := core.ProcessAcks(ack, ack_bits[:], sessionEntry.AckedPackets[:], ackBuffer[:])						
 
 				for i := range acks {
-					core.Debug("ack %d\n", acks[i])
+					core.Debug("ack packet %d\n", acks[i])
 					sessionEntry.AckedPackets[acks[i]%SequenceBufferSize] = acks[i]
 				}
 
