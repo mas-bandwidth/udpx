@@ -104,14 +104,12 @@ func mainReturnWithCode() int {
 
 	sendSequence := uint64(10000) + uint64(rand.Intn(10000))
 	receiveSequence := uint64(0)
-	ack := uint64(0)
-	ack_bits := [32]byte{}
-
+	
 	packetReceiveQueue := make(chan []byte)
 
 	ackBuffer := make([]uint64, SequenceBufferSize)
-
 	ackedPackets := make([]uint64, SequenceBufferSize)
+	receivedPackets := make([]uint64, SequenceBufferSize)
 
     // create client socket
 
@@ -288,6 +286,12 @@ func mainReturnWithCode() int {
 							continue
 						}
 
+						if sequence > receiveSequence {
+							receiveSequence = sequence
+						}
+
+						receivedPackets[sequence%SequenceBufferSize] = sequence
+
 						// process payload packet
 
 						fmt.Printf("payload is %d bytes\n", len(payload))
@@ -313,9 +317,9 @@ func mainReturnWithCode() int {
 						core.ReadUint64(header, &index, &packet_ack)
 						core.ReadBytes(header, &index, packet_ack_bits[:], core.AckBitsBytes)
 
-						fmt.Printf("packet sequence = %d\n", packet_sequence)
-						fmt.Printf("packet ack = %d\n", packet_ack)
-						fmt.Printf("packet ack_bits = [%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x\n", 
+						fmt.Printf("recv packet sequence = %d\n", packet_sequence)
+						fmt.Printf("recv packet ack = %d\n", packet_ack)
+						fmt.Printf("recv packet ack_bits = [%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x\n", 
 							packet_ack_bits[0],
 							packet_ack_bits[1],
 							packet_ack_bits[2],
@@ -407,6 +411,10 @@ func mainReturnWithCode() int {
 
 			// send payload packet
 
+			ack_bits := [core.AckBitsBytes]byte{}
+
+			core.GetAckBits(receiveSequence, receivedPackets[:], ack_bits[:])
+
 			packetData := make([]byte, MaxPacketSize)
 
 			payload := make([]byte, core.MinPayloadBytes)
@@ -418,6 +426,42 @@ func mainReturnWithCode() int {
 
 			index := 0
 
+			fmt.Printf("send packet sequence = %d\n", sendSequence)
+			fmt.Printf("send packet ack = %d\n", receiveSequence)
+			fmt.Printf("send packet ack_bits = [%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x\n", 
+				ack_bits[0],
+				ack_bits[1],
+				ack_bits[2],
+				ack_bits[3],
+				ack_bits[4],
+				ack_bits[5],
+				ack_bits[6],
+				ack_bits[7],
+				ack_bits[8],
+				ack_bits[9],
+				ack_bits[10],
+				ack_bits[11],
+				ack_bits[12],
+				ack_bits[13],
+				ack_bits[14],
+				ack_bits[15],
+				ack_bits[16],
+				ack_bits[17],
+				ack_bits[18],
+				ack_bits[19],
+				ack_bits[20],
+				ack_bits[21],
+				ack_bits[22],
+				ack_bits[23],
+				ack_bits[24],
+				ack_bits[25],
+				ack_bits[26],
+				ack_bits[27],
+				ack_bits[28],
+				ack_bits[29],
+				ack_bits[30],
+				ack_bits[31])
+
 			core.WriteUint8(packetData, &index, version)
 			core.WriteUint8(packetData, &index, core.PayloadPacket)
 			chonkle := packetData[index : index+core.ChonkleBytes]
@@ -426,7 +470,7 @@ func mainReturnWithCode() int {
 			sequenceData := packetData[index : index+core.SequenceBytes]
 			core.WriteUint64(packetData, &index, sendSequence)
 			encryptStart := index
-			core.WriteUint64(packetData, &index, ack)
+			core.WriteUint64(packetData, &index, receiveSequence)
 			core.WriteBytes(packetData, &index, ack_bits[:], len(ack_bits))
 			core.WriteUint8(packetData, &index, core.PayloadPacket)
 			if hasChallengeToken {
