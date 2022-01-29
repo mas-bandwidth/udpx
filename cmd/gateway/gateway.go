@@ -146,7 +146,7 @@ func mainReturnWithCode() int {
 		}
 
 		go func() {
-			core.Debug("started http server on port %s\n", httpPort)
+			core.Debug("started http server on port %s", httpPort)
 			err := srv.ListenAndServe()
 			if err != nil {
 				core.Error("failed to start http server: %v", err)
@@ -278,11 +278,11 @@ func mainReturnWithCode() int {
 
 					// decrypt packet
 
-					publicKeyIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes
-					sequenceIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes + core.SessionIdBytes
+					sessionIdIndex := core.PrefixBytes
+					sequenceIndex := sessionIdIndex + core.SessionIdBytes
 					encryptedDataIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes + core.SessionIdBytes + core.SequenceBytes
 
-					senderPublicKey := packetData[publicKeyIndex : publicKeyIndex+core.SessionIdBytes]
+					senderPublicKey := packetData[sessionIdIndex : sessionIdIndex+core.SessionIdBytes]
 					sequenceData := packetData[sequenceIndex : sequenceIndex+core.SequenceBytes]
 					encryptedData := packetData[encryptedDataIndex : packetBytes-core.PittleBytes]
 
@@ -322,9 +322,17 @@ func mainReturnWithCode() int {
 					sequence := uint64(0)
 					core.ReadUint64(sequenceData, &index, &sequence)
 
+					// get packet gateway id
+					
+					gatewayIdIndex := headerIndex + core.SessionIdBytes + core.SequenceBytes + core.AckBytes + core.AckBitsBytes
+
+					index = 0
+					var packetGatewayId [core.GatewayIdBytes]byte
+					core.ReadBytes(packetData[gatewayIdIndex:gatewayIdIndex+core.GatewayIdBytes], &index, packetGatewayId[:], core.GatewayIdBytes)
+
 					// get challenge token data
 
-					flagsIndex := core.SessionIdBytes + core.SequenceBytes + core.AckBytes + core.AckBitsBytes + core.PacketTypeBytes
+					flagsIndex := core.SessionIdBytes + core.SequenceBytes + core.AckBytes + core.AckBitsBytes + core.GatewayIdBytes + core.ServerIdBytes + core.PacketTypeBytes
 					var challengeTokenData []byte
 					hasChallengeToken := ( header[flagsIndex] & core.Flags_ChallengeToken ) != 0
 					if hasChallengeToken {
@@ -417,6 +425,7 @@ func mainReturnWithCode() int {
 							encryptStart := index
 							core.WriteEncryptedChallengeToken(challengePacketData, &index, &challengeToken, challengePrivateKey)
 							core.WriteUint64(challengePacketData, &index, sequence)
+							core.WriteBytes(challengePacketData, &index, gatewayId[:], core.GatewayIdBytes)
 							encryptFinish := index
 							index += core.HMACBytes_Box
 							pittle := challengePacketData[index:index+core.PittleBytes]
@@ -465,10 +474,11 @@ func mainReturnWithCode() int {
 						continue
 					}
 
-					// update most recently received sequence for this session
+					// drop packets without the correct gateway id
 
-					if sessionEntry.ReceivedSequence < sequence {
-						sessionEntry.ReceivedSequence = sequence
+					if !core.IdEqual(packetGatewayId[:], gatewayId[:]) {
+						core.Debug("wrong gateway id")
+						continue
 					}
 
 					// drop packets that are too old
@@ -513,7 +523,11 @@ func mainReturnWithCode() int {
 
 					core.Debug("send %d byte packet to %s", forwardPacketBytes, serverAddress.String())
 
-					// mark packet as received and forward to server
+					// mark packet as received
+
+					if sessionEntry.ReceivedSequence < sequence {
+						sessionEntry.ReceivedSequence = sequence
+					}
 
 					sessionEntry.ReceivedPackets[sequence%OldSequenceThreshold] = sequence
 				}

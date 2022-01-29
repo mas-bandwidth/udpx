@@ -15,18 +15,6 @@ DONE
 
 	Clean up code across client/gateway/server/core
 
-TODO
-
-	------------
-
-	Add test for the get ack bits function
-
-	Add test for the process acks function
-
-	------------
-
-	Setup a soak test harness so I can test it with a bunch of clients running at the same time
-
 	------------
 
 	I'd like to know the gateway id and the server id on the client.
@@ -47,6 +35,53 @@ TODO
 
 	------------
 
+	Extended the client so it has concept of gateway id and server id and prints them out when they change.
+	
+	------------
+
+	Actually, I can't put the gateway id and server id after the session id. They must be later on in the packet, after the sequence number -- this part is encrypted.
+
+	Fix this in the client, and then get back to updating the gateway.
+
+	Extend the gateway so it is aware of the gateway id and server id in packets.
+
+	Gateway id should return the gateway id in the challenge packet
+
+	Client should stash the challenge gateway id along with the rest of the challenge data
+
+	Gateway should extend so it won't forward payload packets, unless the gateway id matches
+
+	This enforces the client having the correct gateway id in the encrypted part of the header
+
+TODO
+
+	------------
+
+	Client should use the challenge gateway id instead of the current gateway id, if the client has a challenge token
+
+	------------
+
+	Client should now punch through and establish connectivity with the server.
+
+	------------
+
+
+
+
+
+
+
+
+
+
+
+
+	========================
+
+	Extend the server so it handles and fills in the server id portion of packets it sends and receives.
+
+	------------
+
 	There should be a access token and a way for this token to be refreshed at some period, to maintain connectivity to the system.
 
 	The gateway should just ignore any packets that don't have an up to date access token.
@@ -64,5 +99,15 @@ TODO
 	------------
 
 	Probably a good idea to formalize a new "id" section of the packet, eg. prefix, id, header, payload, postfix.
+
+	------------
+
+	Add test for the get ack bits function
+
+	Add test for the process acks function
+
+	------------
+
+	Setup a soak test harness so I can test it with a bunch of clients running at the same time
 
 	------------

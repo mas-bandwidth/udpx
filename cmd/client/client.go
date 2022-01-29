@@ -114,6 +114,7 @@ func mainReturnWithCode() int {
 	challengeTokenData := [core.EncryptedChallengeTokenBytes]byte{}
 	challengeTokenSequence := uint64(0)
 	challengeTokenExpireTimestamp := uint64(0)
+	challengeTokenGatewayId := [core.GatewayIdBytes]byte{}
 
 	sendSequence := uint64(10000) + uint64(rand.Intn(10000))
 	receiveSequence := uint64(0)
@@ -220,13 +221,13 @@ func mainReturnWithCode() int {
 					chonkle := packetData[index : index+core.ChonkleBytes]
 					index += core.ChonkleBytes
 					core.WriteBytes(packetData, &index, sessionId, core.SessionIdBytes)
-					core.WriteBytes(packetData, &index, gatewayId[:], core.GatewayIdBytes)
-					core.WriteBytes(packetData, &index, serverId[:], core.ServerIdBytes)
 					sequenceData := packetData[index : index+core.SequenceBytes]
 					core.WriteUint64(packetData, &index, sendSequence)
 					encryptStart := index
 					core.WriteUint64(packetData, &index, receiveSequence)
 					core.WriteBytes(packetData, &index, ack_bits[:], len(ack_bits))
+					core.WriteBytes(packetData, &index, gatewayId[:], core.GatewayIdBytes)
+					core.WriteBytes(packetData, &index, serverId[:], core.ServerIdBytes)
 					core.WriteUint8(packetData, &index, core.PayloadPacket)
 					if hasChallengeToken {
 						core.WriteUint8(packetData, &index, core.Flags_ChallengeToken)
@@ -389,7 +390,7 @@ func mainReturnWithCode() int {
 
 						// decrypt packet
 
-						sequenceIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes + core.SessionIdBytes + core.GatewayIdBytes + core.ServerIdBytes
+						sequenceIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes + core.SessionIdBytes
 						encryptedDataIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes + core.SessionIdBytes + core.SequenceBytes
 
 						sequenceData := packetData[sequenceIndex : sequenceIndex+core.SequenceBytes]
@@ -510,7 +511,7 @@ func mainReturnWithCode() int {
 
 						// check if we have a new gateway
 
-						gatewayIdIndex := sessionIdIndex + core.SessionIdBytes
+						gatewayIdIndex := sessionIdIndex + core.SessionIdBytes + core.SequenceBytes + core.AckBytes + core.AckBitsBytes
 
 						packetGatewayId := packetData[gatewayIdIndex : gatewayIdIndex + core.GatewayIdBytes]
 
@@ -542,7 +543,7 @@ func mainReturnWithCode() int {
 						
 						core.Debug("received %d byte challenge packet from gateway", len(packetData))
 						
-						if len(packetData) != 142 {
+						if len(packetData) != 174 {
 							core.Debug("bad challenge packet size: %d", len(packetData))
 							continue
 						}
@@ -567,15 +568,19 @@ func mainReturnWithCode() int {
 						index := encryptedDataIndex + core.EncryptedChallengeTokenBytes
 						core.ReadUint64(packetData, &index, &packetChallengeSequence)
 						
+						var packetGatewayId [core.GatewayIdBytes]byte
+						core.ReadBytes(packetData, &index, packetGatewayId[:], core.GatewayIdBytes)
+
 						if !hasChallengeToken || challengeTokenSequence < packetChallengeSequence {
 							if connectedToServer {
-								core.Info("reconnecting")								
+								core.Info("reconnecting...")
 								connectedToServer = false
 							}
 							hasChallengeToken = true
 							copy(challengeTokenData[:], packetChallengeTokenData)
 							challengeTokenSequence = packetChallengeSequence
 							challengeTokenExpireTimestamp = uint64(time.Now().Unix()) + 2
+							copy(challengeTokenGatewayId[:], packetGatewayId[:])
 							core.Debug("updated challenge token: %d", packetChallengeSequence)
 						}
 					}

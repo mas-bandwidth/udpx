@@ -75,7 +75,7 @@ const NonceBytes_SecretBox = 24
 const HMACBytes_SecretBox = 16
 
 const PrefixBytes = VersionBytes + PacketTypeBytes + ChonkleBytes
-const HeaderBytes = SessionIdBytes + GatewayIdBytes + ServerIdBytes + SequenceBytes + AckBytes + AckBitsBytes + PacketTypeBytes + FlagsBytes
+const HeaderBytes = SessionIdBytes + SequenceBytes + AckBytes + AckBitsBytes + GatewayIdBytes + ServerIdBytes + PacketTypeBytes + FlagsBytes
 const PostfixBytes = HMACBytes_Box + PittleBytes
 const MinPayloadBytes = 1000
 const MinPacketSize = PrefixBytes + HeaderBytes + MinPayloadBytes + PostfixBytes
@@ -158,9 +158,10 @@ func Error(s string, params ...interface{}) {
 }
 
 func Debug(s string, params ...interface{}) {
-	if debugLogs {
+	// todo
+	// if debugLogs {
 		fmt.Printf(s+"\n", params...)
-	}
+	// }
 }
 
 func Info(s string, params ...interface{}) {
