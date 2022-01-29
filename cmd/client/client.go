@@ -121,8 +121,14 @@ func mainReturnWithCode() int {
 	ackedPackets := make([]uint64, SequenceBufferSize)
 	receivedPackets := make([]uint64, SequenceBufferSize)
 
+	payloadAckQueue := make(chan uint64, QueueSize)
 	payloadSendQueue := make(chan []byte, QueueSize)
 	payloadReceiveQueue := make(chan []byte, QueueSize)
+
+	sequenceToPayloadId := make([]uint64, SequenceBufferSize)
+	for i := range sequenceToPayloadId {
+		sequenceToPayloadId[i] = ^uint64(0)
+	}
 
     // create client socket
 
@@ -151,6 +157,8 @@ func mainReturnWithCode() int {
 		// send packets
 
 		go func() {
+
+			payloadId := uint64(0)
 
 			for {
 				select {
@@ -264,7 +272,9 @@ func mainReturnWithCode() int {
 
 					core.Debug("sent %d byte packet to %s", len(packetData), gatewayAddress)
 
+					sequenceToPayloadId[sendSequence%SequenceBufferSize] = payloadId
 					sendSequence++
+					payloadId++
 
 					// time out the challenge token if it's too old
 
@@ -487,6 +497,8 @@ func mainReturnWithCode() int {
 						for i := range acks {
 							core.Debug("ack %d", acks[i])
 							ackedPackets[acks[i]%SequenceBufferSize] = acks[i]
+							payloadAck := sequenceToPayloadId[acks[i]%SequenceBufferSize]
+							payloadAckQueue <- payloadAck
 						}
 
 						// clear challenge token
@@ -554,6 +566,8 @@ func mainReturnWithCode() int {
 
 	go func() {
 
+		ackBuffer := [QueueSize]uint64{}
+
 		for {
 
 			// send payload
@@ -564,6 +578,13 @@ func mainReturnWithCode() int {
 			}
 
 			payloadSendQueue <- payload
+
+			// process payload acks
+
+			acks := GetPayloadAcks(payloadAckQueue, ackBuffer[:])
+			for i := 0; i < len(acks); i++ {
+				core.Info("ack payload %d", acks[i])
+			}
 
 			// receive payloads
 
@@ -609,4 +630,15 @@ func ReceivePayload(queue chan []byte) []byte {
 	default:
 		return nil
 	}
+}
+
+func GetPayloadAcks(queue chan uint64, buffer []uint64) []uint64 {
+	index := 0
+	select {
+	case ack := <-queue:
+		buffer[index] = ack
+		index++
+	default:
+	}
+	return buffer[:index]
 }

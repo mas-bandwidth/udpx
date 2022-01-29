@@ -1,6 +1,25 @@
 DONE
 
+	Clean up client code and make the main loop totally separate from any sequence numbers in clients.
+
+	The client needs to know what payloads get acked.
+
+	This can be a separate sequence number, implicit, starting at 0 for each payload sent.
+
+	Since bandwidth is not a serious concern, and scalability is, having a separate payload sequence
+	from the packet sequence is viable, and enables better scaling -- if the sequence number for packets
+	was exposed to the caller, it would create contention between threads when sending internal packets, 
+	and payload packets on the protocol.
+
 TODO
+
+	------------
+
+	Implement a payload ack channel, and push acks back down to the caller via it.
+
+	------------
+
+	Clean up code across client/gateway/server/core
 
 	------------
 
@@ -10,14 +29,6 @@ TODO
 
 	------------
 
-	Clean up code and constants across client/gateway/server/core
-
-	------------
-
-	Think about what should be made configurable in the gateway and server that currently isn't.
-
-	------------
-
-	Setup a soak test harness so I can soak it with a bunch of clients running
+	Setup a soak test harness so I can test it with a bunch of clients running at the same time
 
 	------------

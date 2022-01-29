@@ -16,6 +16,8 @@ IDEAS
 
 		f) handle migrations of clients from one gateway instance to another (via hashing or whatever)
 
+	*** DONE ***
+
 	-------------
 
 	The job of the server is to:
@@ -23,6 +25,8 @@ IDEAS
 		a) maintain reliability via ack/ack_bits
 
 		b) enable migration of a client from one server instance to another
+
+	*** DONE TO HERE ***
 
 		c) queue up messages delivered from the client to some internal message processing system
 

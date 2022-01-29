@@ -151,7 +151,7 @@ func mainReturnWithCode() int {
 
 	// --------------------------------------------------
 
-	// listen for udp packets on public address
+	// listen on public address
 
 	wg.Add(numThreads)
 
@@ -695,7 +695,7 @@ func mainReturnWithCode() int {
 
 	// -----------------------------------------------------------------
 
-	core.Info("started server on port %s", udpPort)
+	core.Info("started gateway on port %s", udpPort)
 
 	// Wait for shutdown signal
 	termChan := make(chan os.Signal, 1)
