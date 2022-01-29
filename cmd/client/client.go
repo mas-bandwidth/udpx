@@ -550,7 +550,7 @@ func mainReturnWithCode() int {
 
 			// sleep till next frame
 
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(10 * time.Millisecond)
 
 			sendSequence++
 		}
