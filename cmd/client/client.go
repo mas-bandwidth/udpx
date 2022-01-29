@@ -583,7 +583,7 @@ func mainReturnWithCode() int {
 
 			acks := GetPayloadAcks(payloadAckQueue, ackBuffer[:])
 			for i := 0; i < len(acks); i++ {
-				core.Info("ack payload %d", acks[i])
+				core.Debug("ack payload %d", acks[i])
 			}
 
 			// receive payloads
