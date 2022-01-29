@@ -310,7 +310,7 @@ func mainReturnWithCode() int {
 
 					// ignore packet types we don't support
 
-					packetType := header[core.SessionIdBytes+core.SequenceBytes+core.AckBytes+core.AckBitsBytes]
+					packetType := header[core.SessionIdBytes+core.SequenceBytes+core.AckBytes+core.AckBitsBytes+core.GatewayIdBytes+core.ServerIdBytes]
 					if packetType != core.PayloadPacket {
 						core.Debug("invalid packet type: %d", packetType)
 						continue

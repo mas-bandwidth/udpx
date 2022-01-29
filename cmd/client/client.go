@@ -226,7 +226,11 @@ func mainReturnWithCode() int {
 					encryptStart := index
 					core.WriteUint64(packetData, &index, receiveSequence)
 					core.WriteBytes(packetData, &index, ack_bits[:], len(ack_bits))
-					core.WriteBytes(packetData, &index, gatewayId[:], core.GatewayIdBytes)
+					if hasChallengeToken {
+						core.WriteBytes(packetData, &index, challengeTokenGatewayId[:], core.GatewayIdBytes)
+					} else {
+						core.WriteBytes(packetData, &index, gatewayId[:], core.GatewayIdBytes)						
+					}
 					core.WriteBytes(packetData, &index, serverId[:], core.ServerIdBytes)
 					core.WriteUint8(packetData, &index, core.PayloadPacket)
 					if hasChallengeToken {
