@@ -328,7 +328,7 @@ func mainReturnWithCode() int {
 
 						core.Debug("recv packet sequence = %d", packet_sequence)
 						core.Debug("recv packet ack = %d", packet_ack)
-						core.Debug("recv packet ack_bits = [%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x", 
+						core.Debug("recv packet ack_bits = [%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x]", 
 							packet_ack_bits[0],
 							packet_ack_bits[1],
 							packet_ack_bits[2],
@@ -445,7 +445,7 @@ func mainReturnWithCode() int {
 
 			core.Debug("send packet sequence = %d", sendSequence)
 			core.Debug("send packet ack = %d", receiveSequence)
-			core.Debug("send packet ack_bits = [%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x", 
+			core.Debug("send packet ack_bits = [%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x]", 
 				ack_bits[0],
 				ack_bits[1],
 				ack_bits[2],

@@ -71,7 +71,7 @@ func mainReturnWithCode() int {
 
 	serviceName := "udpx server"
 
-	fmt.Printf("%s\n", serviceName)
+	core.Info("%s", serviceName)
 
 	ctx, ctxCancelFunc := context.WithCancel(context.Background())
 
@@ -89,7 +89,7 @@ func mainReturnWithCode() int {
 		}
 
 		go func() {
-			fmt.Printf("started http server on port %s\n", httpPort)
+			core.Debug("started http server on port %s", httpPort)
 			err := srv.ListenAndServe()
 			if err != nil {
 				core.Error("failed to start http server: %v", err)
@@ -172,7 +172,7 @@ func mainReturnWithCode() int {
 
 				packetBytes, _, err := conn.ReadFromUDP(buffer[:])
 				if err != nil {
-					core.Error("failed to read udp packet: %v", err)
+					core.Debug("failed to read udp packet: %v", err)
 					break
 				}
 
@@ -208,7 +208,7 @@ func mainReturnWithCode() int {
 				core.ReadUint8(packetData, &index, &version)
 
 				if version != 0 {
-					fmt.Printf("unknown packet version: %d\n", version)
+					core.Debug("unknown packet version: %d", version)
 					continue
 				}
 
@@ -222,18 +222,18 @@ func mainReturnWithCode() int {
 				core.ReadUint8(packetData, &index, &flags)
 
 				if packetType != core.PayloadPacket {
-					fmt.Printf("unknown packet type: %d\n", packetType)
+					core.Debug("unknown packet type: %d", packetType)
 					continue
 				}
 
 				if flags != 0 {
-					fmt.Printf("unknown flags\n")
+					core.Debug("unknown flags")
 					continue
 				}
 
-				fmt.Printf("recv packet sequence = %d\n", sequence)
-				fmt.Printf("recv packet ack = %d\n", ack)
-				fmt.Printf("recv packet ack_bits = [%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x\n", 
+				core.Debug("recv packet sequence = %d", sequence)
+				core.Debug("recv packet ack = %d", ack)
+				core.Debug("recv packet ack_bits = [%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x]", 
 					ack_bits[0],
 					ack_bits[1],
 					ack_bits[2],
@@ -274,7 +274,7 @@ func mainReturnWithCode() int {
 						// add new session entry
 						sessionEntry = &SessionEntry{SendSequence: ack+10000, ReceiveSequence: sequence}
 						sessionMap_New[sessionId] = sessionEntry
-						fmt.Printf("new session %s from %s\n", core.SessionIdString(sessionId[:]), clientAddress.String())
+						core.Info("new session %s from %s", core.SessionIdString(sessionId[:]), clientAddress.String())
 					} else {
 						// migrate old -> new session map
 						sessionMap_New[sessionId] = sessionEntry
@@ -283,8 +283,7 @@ func mainReturnWithCode() int {
 
 				if sessionEntry == nil {
 					// this should never happen
-					fmt.Printf("no session entry\n")
-					continue
+					panic("no session entry")
 				}
 
 				if sessionEntry.ReceiveSequence < sequence {
@@ -295,11 +294,12 @@ func mainReturnWithCode() int {
 
 				payload := packetData[index:]
 
-				fmt.Printf("received packet %d from %s with %d byte payload\n", sequence, core.SessionIdString(sessionId[:]), len(payload))
+				core.Debug("received packet %d from %s with %d byte payload", sequence, core.SessionIdString(sessionId[:]), len(payload))
 
+				// -----------------------
+				// todo: function to process payload
 				if len(payload) != core.MinPayloadBytes {
-					fmt.Printf("payload size mismatch. expected %d, got %d\n", core.MinPayloadBytes, len(payload))
-					continue
+					panic(fmt.Sprintf("payload size mismatch. expected %d, got %d\n", core.MinPayloadBytes, len(payload)))
 				}
 
 				for i := 0; i < core.MinPayloadBytes; i++ {
@@ -307,6 +307,7 @@ func mainReturnWithCode() int {
 						panic(fmt.Sprintf("payload data mismatch at index %d. expected %d, got %d\n", i, byte(i), payload[i]))
 					}
 				}
+				// -----------------------
 
 				// process acks
 
@@ -315,7 +316,7 @@ func mainReturnWithCode() int {
 				acks := core.ProcessAcks(ack, ack_bits[:], sessionEntry.AckedPackets[:], ackBuffer[:])						
 
 				for i := range acks {
-					fmt.Printf("ack %d\n", acks[i])
+					core.Debug("ack %d\n", acks[i])
 					sessionEntry.AckedPackets[acks[i]%SequenceBufferSize] = acks[i]
 				}
 
@@ -339,11 +340,9 @@ func mainReturnWithCode() int {
 
 				core.GetAckBits(sessionEntry.ReceiveSequence, sessionEntry.ReceivedPackets[:], send_ack_bits[:])
 
-				// todo: debug stuff
-
-				fmt.Printf("send packet sequence = %d\n", send_sequence)
-				fmt.Printf("send packet ack = %d\n", send_ack)
-				fmt.Printf("send packet ack_bits = [%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x\n", 
+				core.Debug("send packet sequence = %d", send_sequence)
+				core.Debug("send packet ack = %d", send_ack)
+				core.Debug("send packet ack_bits = [%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x]", 
 					send_ack_bits[0],
 					send_ack_bits[1],
 					send_ack_bits[2],
@@ -398,8 +397,8 @@ func mainReturnWithCode() int {
 				if _, err := conn.WriteToUDP(responsePacketData, &gatewayInternalAddress); err != nil {
 					core.Error("failed to send response payload to gateway: %v", err)
 				}
-				fmt.Printf("send %d byte response to %s\n", responsePacketBytes, gatewayInternalAddress.String())
 
+				core.Debug("send %d byte response to %s", responsePacketBytes, gatewayInternalAddress.String())
 			}
 
 			wg.Done()
@@ -407,7 +406,7 @@ func mainReturnWithCode() int {
 		}(i)
 	}
 
-	fmt.Printf("started udp server on port %s\n", udpPort)
+	core.Info("started server on port %s", udpPort)
 
 	// Wait for shutdown signal
 	termChan := make(chan os.Signal, 1)
@@ -417,8 +416,6 @@ func mainReturnWithCode() int {
 	fmt.Println("\nshutting down")
 
 	ctxCancelFunc()
-
-	// wait for something ...
 
 	fmt.Println("shutdown completed")
 

@@ -38,10 +38,6 @@ DONE
 
 	Now at this point we have a reliability system that can scale wide.
 
-TODO
-
-	------------
-
 	It's time to clean up... 
 
 	Uniformly convert to core logs. Remove printfs.
@@ -50,11 +46,25 @@ TODO
 
 	Make the client, server and gateway run with super clean logs.
 
+TODO
+
 	------------
 
-	Add tests for the get ack bits function
+	Setup a function to send payload, and process payload on the client.
 
-	Add tests for the process acks function
+	------------
+
+	Functions to send payload, and process payload on the server.
+
+	------------
+
+	Make the gateway forwarding zero copy.
+
+	------------
+
+	Add test for the get ack bits function
+
+	Add test for the process acks function
 
 	------------
 
@@ -63,5 +73,9 @@ TODO
 	------------
 
 	Think about what should be made configurable in the gateway and server that currently isn't.
+
+	------------
+
+	Setup a soak test harness so I can soak it with a bunch of clients running
 
 	------------

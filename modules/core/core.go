@@ -576,7 +576,7 @@ func GetAddressData(address *net.UDPAddr, addressData []byte, addressPort *uint1
 }
 
 func SessionIdString(sessionId []byte) string {
-	return fmt.Sprintf("%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x",
+	return fmt.Sprintf("%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
 		sessionId[0],
 		sessionId[1],
 		sessionId[2],
