@@ -148,71 +148,7 @@ func mainReturnWithCode() int {
 			panic(fmt.Sprintf("could not set connection write buffer size: %v", err))
 		}
 
-		go func() {
-
-			// receive packets
-
-			for {
-
-				packetData := make([]byte, MaxPacketSize)
-
-				packetBytes, from, err := conn.ReadFromUDP(packetData)
-				if err != nil {
-					core.Debug("failed to read udp packet: %v", err)
-					break
-				}
-
-				if !core.AddressEqual(from, gatewayAddress) {
-					core.Debug("packet is not from gateway")
-					continue
-				}
-
-				if packetBytes < core.PrefixBytes {
-					core.Debug("packet is too small")
-					continue
-				}
-
-				if packetData[0] != 0 {
-					core.Debug("unknown packet version: %d", packetData[0])
-					continue
-				}
-
-				if packetData[1] != core.PayloadPacket && packetData[1] != core.ChallengePacket {
-					core.Debug("unknown packet type %d", packetData[1])
-					continue
-				}
-
-				// packet filter
-
-				if !core.BasicPacketFilter(packetData, packetBytes) {
-					core.Debug("basic packet filter failed")
-					continue
-				}
-
-				var magic [8]byte
-
-				var fromAddressData [4]byte
-				var fromAddressPort uint16
-
-				var toAddressData [4]byte
-				var toAddressPort uint16
-
-				core.GetAddressData(from, fromAddressData[:], &fromAddressPort)
-				core.GetAddressData(clientAddress, toAddressData[:], &toAddressPort)
-
-				if !core.AdvancedPacketFilter(packetData, magic[:], fromAddressData[:], fromAddressPort, toAddressData[:], toAddressPort, packetBytes) {
-					core.Debug("advanced packet filter failed")
-					continue
-				}
-
-				packetData = packetData[:packetBytes]
-
-				packetReceiveQueue <- packetData
-			}
-
-		}()
-
-		// send packet loop
+		// send packets
 
 		go func() {
 
@@ -340,7 +276,71 @@ func mainReturnWithCode() int {
 			}
 		}()
 
-		// receive packet loop
+		go func() {
+
+			// receive packets (stateless)
+
+			for {
+
+				packetData := make([]byte, MaxPacketSize)
+
+				packetBytes, from, err := conn.ReadFromUDP(packetData)
+				if err != nil {
+					core.Debug("failed to read udp packet: %v", err)
+					break
+				}
+
+				if !core.AddressEqual(from, gatewayAddress) {
+					core.Debug("packet is not from gateway")
+					continue
+				}
+
+				if packetBytes < core.PrefixBytes {
+					core.Debug("packet is too small")
+					continue
+				}
+
+				if packetData[0] != 0 {
+					core.Debug("unknown packet version: %d", packetData[0])
+					continue
+				}
+
+				if packetData[1] != core.PayloadPacket && packetData[1] != core.ChallengePacket {
+					core.Debug("unknown packet type %d", packetData[1])
+					continue
+				}
+
+				// packet filter
+
+				if !core.BasicPacketFilter(packetData, packetBytes) {
+					core.Debug("basic packet filter failed")
+					continue
+				}
+
+				var magic [8]byte
+
+				var fromAddressData [4]byte
+				var fromAddressPort uint16
+
+				var toAddressData [4]byte
+				var toAddressPort uint16
+
+				core.GetAddressData(from, fromAddressData[:], &fromAddressPort)
+				core.GetAddressData(clientAddress, toAddressData[:], &toAddressPort)
+
+				if !core.AdvancedPacketFilter(packetData, magic[:], fromAddressData[:], fromAddressPort, toAddressData[:], toAddressPort, packetBytes) {
+					core.Debug("advanced packet filter failed")
+					continue
+				}
+
+				packetData = packetData[:packetBytes]
+
+				packetReceiveQueue <- packetData
+			}
+
+		}()
+
+		// receive packets (stateful)
 
 		for {
 
