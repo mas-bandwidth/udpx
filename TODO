@@ -53,32 +53,23 @@ DONE
 
 	This enforces the client having the correct gateway id in the encrypted part of the header
 
+	Client should use the challenge gateway id instead of the current gateway id, if the client has a challenge token
+
+	Client should now punch through and establish connectivity with the server.
+
+	Server now needs to be passed over to fix it so that it sends and receives packets of the right forward.
+
+	Insert the server id in payload packets sent down to the client via gateway.
+
+	Client should catch the server id and the gateway id and print them out.
+
+	Extend the server so it handles and fills in the server id portion of packets it sends and receives.
+
 TODO
 
 	------------
 
-	Client should use the challenge gateway id instead of the current gateway id, if the client has a challenge token
-
-	------------
-
-	Client should now punch through and establish connectivity with the server.
-
-	------------
-
-
-
-
-
-
-
-
-
-
-
-
-	========================
-
-	Extend the server so it handles and fills in the server id portion of packets it sends and receives.
+	Server also needs the concept of payload id and payload acks
 
 	------------
 
@@ -91,14 +82,6 @@ TODO
 	Potentially, the client can avoid needing to update the access token entirely, if the server backend passes the updated token back down to the client every n seconds, this avoids the need to maintain additional connections.
 
 	This is definitely desirable.
-
-	------------
-
-	Server also needs the concept of payload id and payload acks
-
-	------------
-
-	Probably a good idea to formalize a new "id" section of the packet, eg. prefix, id, header, payload, postfix.
 
 	------------
 

@@ -105,7 +105,11 @@ func mainReturnWithCode() int {
 	var gatewayId [core.GatewayIdBytes]byte
 	var serverId [core.ServerIdBytes]byte
 
+	core.Info("starting client on port %s", udpPort)
+
 	core.Info("session id is %s", core.IdString(sessionId))
+
+	core.Info("connecting to %s", gatewayAddress)
 
 	// setup
 
@@ -426,7 +430,7 @@ func mainReturnWithCode() int {
 
 						// check encrypted packet type matches
 
-						packetType := header[core.SessionIdBytes+core.SequenceBytes+core.AckBytes+core.AckBitsBytes]
+						packetType := header[core.SessionIdBytes+core.SequenceBytes+core.AckBytes+core.AckBitsBytes+core.GatewayIdBytes+core.ServerIdBytes]
 						if packetType != core.PayloadPacket {
 							core.Debug("packet type mismatch: %d", packetType)
 							continue
@@ -597,10 +601,6 @@ func mainReturnWithCode() int {
 	}()
 
 	// main loop
-
-	core.Info("started client on port %s", udpPort)
-
-	core.Info("connecting to %s", gatewayAddress)
 
 	go func() {
 

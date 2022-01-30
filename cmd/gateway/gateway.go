@@ -120,6 +120,8 @@ func mainReturnWithCode() int {
 
 	udpPort := envvar.Get("UDP_PORT", "40000")
 
+	core.Info("starting gateway on port %s", udpPort)
+
 	gatewayId := core.RandomBytes(core.GatewayIdBytes)
 
 	core.Info("gateway id is %s", core.IdString(gatewayId))
@@ -704,7 +706,7 @@ func mainReturnWithCode() int {
 						core.Error("failed to forward packet to client: %v", err)
 					}
 
-					core.Debug("send %d byte packet to %s\n", len(forwardPacketData), clientAddress.String())
+					core.Debug("send %d byte packet to %s", len(forwardPacketData), clientAddress.String())
 				}
 
 				wg.Done()
@@ -715,9 +717,6 @@ func mainReturnWithCode() int {
 
 	// -----------------------------------------------------------------
 
-	core.Info("started gateway on port %s", udpPort)
-
-	// Wait for shutdown signal
 	termChan := make(chan os.Signal, 1)
 	signal.Notify(termChan, os.Interrupt, syscall.SIGTERM)
 	<-termChan

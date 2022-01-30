@@ -75,13 +75,37 @@ func mainReturnWithCode() int {
 
 	// configure
 
-	serverId := core.RandomBytes(core.ServerIdBytes)
-
-	core.Info("server id is %s", core.IdString(serverId))
-
 	ctx, ctxCancelFunc := context.WithCancel(context.Background())
 
-	// Start HTTP server
+	numThreads, err := envvar.GetInt("NUM_THREADS", 1)
+	if err != nil {
+		core.Error("invalid NUM_THREADS: %v", err)
+		return 1
+	}
+
+	readBuffer, err := envvar.GetInt("READ_BUFFER", 100000)
+	if err != nil {
+		core.Error("invalid READ_BUFFER: %v", err)
+		return 1
+	}
+
+	writeBuffer, err := envvar.GetInt("WRITE_BUFFER", 100000)
+	if err != nil {
+		core.Error("invalid WRITE_BUFFER: %v", err)
+		return 1
+	}
+
+	udpPort := envvar.Get("UDP_PORT", "50000")
+
+	serverId := core.RandomBytes(core.ServerIdBytes)
+
+	core.Info("starting server on port %s", udpPort)
+
+	core.Info("server id is %s", core.IdString(serverId))	
+
+	// --------------------------------------------------------------------
+
+	// start web server
 	{
 		router := mux.NewRouter()
 		router.HandleFunc("/health", healthHandler).Methods("GET")
@@ -104,25 +128,9 @@ func mainReturnWithCode() int {
 		}()
 	}
 
-	numThreads, err := envvar.GetInt("NUM_THREADS", 1)
-	if err != nil {
-		core.Error("invalid NUM_THREADS: %v", err)
-		return 1
-	}
+	// --------------------------------------------------------------------
 
-	readBuffer, err := envvar.GetInt("READ_BUFFER", 100000)
-	if err != nil {
-		core.Error("invalid READ_BUFFER: %v", err)
-		return 1
-	}
-
-	writeBuffer, err := envvar.GetInt("WRITE_BUFFER", 100000)
-	if err != nil {
-		core.Error("invalid WRITE_BUFFER: %v", err)
-		return 1
-	}
-
-	udpPort := envvar.Get("UDP_PORT", "50000")
+	// start udp server
 
 	var wg sync.WaitGroup
 
@@ -208,6 +216,8 @@ func mainReturnWithCode() int {
 				var sequence uint64
 				var ack uint64
 				var ack_bits [core.AckBitsBytes]byte
+				var packetGatewayId [core.GatewayIdBytes]byte
+				var packetServerId [core.ServerIdBytes]byte
 				var packetType byte
 				var flags byte
 
@@ -224,6 +234,8 @@ func mainReturnWithCode() int {
 				core.ReadUint64(packetData, &index, &sequence)
 				core.ReadUint64(packetData, &index, &ack)
 				core.ReadBytes(packetData, &index, ack_bits[:], core.AckBitsBytes)
+				core.ReadBytes(packetData, &index, packetGatewayId[:], core.GatewayIdBytes)
+				core.ReadBytes(packetData, &index, packetServerId[:], core.ServerIdBytes)
 				core.ReadUint8(packetData, &index, &packetType)
 				core.ReadUint8(packetData, &index, &flags)
 
@@ -393,6 +405,8 @@ func mainReturnWithCode() int {
 				core.WriteUint64(responsePacketData, &index, send_sequence)
 				core.WriteUint64(responsePacketData, &index, send_ack)
 				core.WriteBytes(responsePacketData, &index, send_ack_bits[:], len(send_ack_bits))
+				core.WriteBytes(responsePacketData, &index, packetGatewayId[:], core.GatewayIdBytes)
+				core.WriteBytes(responsePacketData, &index, serverId[:], core.ServerIdBytes)
 				core.WriteUint8(responsePacketData, &index, core.PayloadPacket)
 				core.WriteUint8(responsePacketData, &index, flags)
 				core.WriteBytes(responsePacketData, &index, dummyPayload, len(dummyPayload))
@@ -412,9 +426,6 @@ func mainReturnWithCode() int {
 		}(i)
 	}
 
-	core.Info("started server on port %s", udpPort)
-
-	// Wait for shutdown signal
 	termChan := make(chan os.Signal, 1)
 	signal.Notify(termChan, os.Interrupt, syscall.SIGTERM)
 	<-termChan
