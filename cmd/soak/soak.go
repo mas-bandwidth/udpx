@@ -32,7 +32,7 @@
 package main
 
 import (
-	"bytes"
+	"fmt"
 	"os"
 	"os/exec"
 )
@@ -43,50 +43,50 @@ const (
 	serverBin  = "./dist/server"
 )
 
-func client() (*exec.Cmd, *bytes.Buffer) {
+func client(port uint16) *exec.Cmd {
 
 	cmd := exec.Command(clientBin)
 	if cmd == nil {
 		panic("could not create client!\n")
-		return nil, nil
+		return nil
 	}
 
-	/*
-	if mode != "" {
-		cmd.Env = os.Environ()
-		cmd.Env = append(cmd.Env, fmt.Sprintf("BACKEND_MODE=%s", mode))
-	}
-	*/
+	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, fmt.Sprintf("UDP_PORT=%d", port))
+	cmd.Env = append(cmd.Env, fmt.Sprintf("CLIENT_ADDRESS=127.0.0.1:%d", port))
+	cmd.Env = append(cmd.Env, "GATEWAY_ADDRESS=127.0.0.1:40000")
+	cmd.Env = append(cmd.Env, "GATEWAY_PUBLIC_KEY=vnIjsJWZzgq+nS9t3KU7ch5BFhgDkm2U2bm7/2W6eRs=")
 
-	var output bytes.Buffer
-	cmd.Stdout = &output
-	cmd.Stderr = &output
+	// cmd.Stdout = os.Stdout
+	// cmd.Stderr = os.Stderr
+
 	cmd.Start()
 
-	return cmd, &output
+	return cmd
 }
 
-func gateway() (*exec.Cmd, *bytes.Buffer) {
+func gateway() *exec.Cmd {
 
 	cmd := exec.Command(gatewayBin)
 	if cmd == nil {
 		panic("could not create gateway!\n")
-		return nil, nil
+		return nil
 	}
 
-	/*
-	if mode != "" {
-		cmd.Env = os.Environ()
-		cmd.Env = append(cmd.Env, fmt.Sprintf("BACKEND_MODE=%s", mode))
-	}
-	*/
+	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, "HTTP_PORT=40000")
+	cmd.Env = append(cmd.Env, "UDP_PORT=40000")
+	cmd.Env = append(cmd.Env, "GATEWAY_ADDRESS=127.0.0.1:40000")
+	cmd.Env = append(cmd.Env, "GATEWAY_INTERNAL_ADDRESS=127.0.0.1:40001")
+	cmd.Env = append(cmd.Env, "GATEWAY_PRIVATE_KEY=qmnxBZs2UElVT4SXCdDuX4td+qtPkuXLL5VdOE0vvcA=")
+	cmd.Env = append(cmd.Env, "SERVER_ADDRESS=127.0.0.1:50000")
 
-	// var output bytes.Buffer
-	// cmd.Stdout = &output
-	// cmd.Stderr = &output
+	// cmd.Stdout = os.Stdout
+	// cmd.Stderr = os.Stderr
+
 	cmd.Start()
 
-	return cmd, nil // &output
+	return cmd
 }
 
 func server() *exec.Cmd {
@@ -95,6 +95,8 @@ func server() *exec.Cmd {
 		panic("could not create server!\n")
 		return nil
 	}
+	cmd.Env = append(cmd.Env, "HTTP_PORT=50000")
+	cmd.Env = append(cmd.Env, "UDP_PORT=50000")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Start()
@@ -103,20 +105,25 @@ func server() *exec.Cmd {
 
 func soak() {
 
+	const NumClients = 10
+
+	client_cmd := make([]*exec.Cmd, NumClients)
+	for i := 0; i < NumClients; i++ {
+		client_cmd[i] = client(uint16(30000 + i))
+	}
+
+	gateway_cmd := gateway()
 	server_cmd := server()
 
 	server_cmd.Wait()
 
-	/*
-	backend_cmd.Wait()
+	gateway_cmd.Process.Signal(os.Interrupt)
+	gateway_cmd.Wait()
 
-	server_cmd.Process.Signal(os.Interrupt)
-	backend_cmd.Process.Signal(os.Interrupt)
-
-	server_cmd.Wait()
-	backend_cmd.Wait()
-	*/
-
+	for i := 0; i < NumClients; i++ {
+		client_cmd[i].Process.Signal(os.Interrupt)
+		client_cmd[i].Wait()		
+	}
 }
 
 func main() {

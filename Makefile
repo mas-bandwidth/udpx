@@ -49,7 +49,7 @@ dev-client: build-client ## runs a local client
 
 .PHONY: dev-gateway
 dev-gateway: build-gateway ## runs a local gateway
-	HTTP_PORT=40000 UDP_PORT=40000 CLIENT_ADDRESS=127.0.0.1:30000 GATEWAY_ADDRESS=127.0.0.1:40000 GATEWAY_INTERNAL_ADDRESS=127.0.0.1:40001 GATEWAY_PRIVATE_KEY=qmnxBZs2UElVT4SXCdDuX4td+qtPkuXLL5VdOE0vvcA= SERVER_ADDRESS=127.0.0.1:50000 ./dist/gateway
+	HTTP_PORT=40000 UDP_PORT=40000 GATEWAY_ADDRESS=127.0.0.1:40000 GATEWAY_INTERNAL_ADDRESS=127.0.0.1:40001 GATEWAY_PRIVATE_KEY=qmnxBZs2UElVT4SXCdDuX4td+qtPkuXLL5VdOE0vvcA= SERVER_ADDRESS=127.0.0.1:50000 ./dist/gateway
 
 .PHONY: dev-server
 dev-server: build-server ## runs a local server
