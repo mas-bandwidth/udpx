@@ -344,3 +344,19 @@ func TestChallengeToken(t *testing.T) {
 	result = ReadEncryptedChallengeToken(buffer, &index, &readChallengeToken, privateKey)
 	assert.False(t, result)
 }
+
+func TestAckBits(t *testing.T) {
+
+	t.Parallel()
+
+	// todo
+
+}
+
+func TestProcessAcks(t *testing.T) {
+
+	t.Parallel()
+
+	// todo
+
+}

@@ -2,10 +2,6 @@ DONE
 
 	Setup a soak test harness so I can test it with a bunch of clients running at the same time
 
-TODO
-
-	------------
-
 	Server also needs the concept of payload id and payload acks
 
 	The server should be setup such that there is a channel for payload sends per-session
@@ -20,16 +16,12 @@ TODO
 
 	I can't see a server scaling if it has to have an internal tick rate and it pumps out send packets to 1000s of clients every 1/n seconds, with the amount of contention between the threads.
 
+TODO
+
 	------------
 
 	Add test for the get ack bits function
 
 	Add test for the process acks function
-
-	------------
-
-	What's the next step?
-
-	It seems that getting the server configured so it has a bunch of channels, and these channels forward to services is the next step.
 
 	------------
