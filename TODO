@@ -20,6 +20,32 @@ TODO
 
 	------------
 
+	The client should never know their unique client id. This is not PIAA. It is an internal implementation detail in our system.
+
+	Thus, the unique client id should be encoded in the session token and not be readable by the client.
+
+	------------
+
+	The client should have the concept of choke on packets it sends, such that it respects the up kpbs limit.
+
+	There should be a kilobits up/down limit per-session and the gateway should enforce this.
+
+	------------
+
+	There should be a globally unique concept of user id (32 bytes), such that specific user ids can be banned and scrubbed at the gateway level.
+
+	------------
+
+	There should be a connect token which turns into a session token that renews every 10 seconds. This should be done by the server, although the initial connect token must be generated to enable client connection.
+
+	The gateway must scrub out any invalid connect tokens.
+
+	------------
+
+	There should be key rotation such that the connect tokens and session tokens can have a rotating key pair, such that if a keypair is leaked, then it can easily be rotated out to a new one.
+
+	------------
+
 	Add test for the get ack bits function
 
 	Add test for the process acks function
