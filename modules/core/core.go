@@ -696,3 +696,56 @@ func ProcessAcks(ackSequence uint64, ack_bits []byte, ackedPackets []uint64, ack
 	}
 	return ackBuffer[:numAcks]
 }
+
+type SessionToken struct {
+	ExpireTimestamp uint64
+	SessionId [SessionIdBytes]byte
+	UserId [UserIdBytes]byte
+}
+
+const SessionTokenBytes = 8 + SessionIdBytes + UserIdBytes
+const EncryptedSessionTokenBytes = NonceBytes_SecretBox + SessionTokenBytes + HMACBytes_SecretBox
+
+/*
+func WriteChallengeToken(buffer []byte, index *int, token *ChallengeToken) {
+	WriteUint64(buffer, index, token.ExpireTimestamp)
+	WriteAddress(buffer, index, &token.ClientAddress)
+	WriteUint64(buffer, index, token.Sequence)
+}
+
+func ReadChallengeToken(buffer []byte, index *int, token *ChallengeToken) bool {
+	if len(buffer) - *index < ChallengeTokenBytes {
+		return false
+	}
+	ReadUint64(buffer, index, &token.ExpireTimestamp)
+	ReadAddress(buffer, index, &token.ClientAddress)
+	ReadUint64(buffer, index, &token.Sequence)
+	return true
+}
+
+func WriteEncryptedChallengeToken(buffer []byte, index *int, token *ChallengeToken, privateKey []byte) {
+	nonce := buffer[*index:*index+NonceBytes_SecretBox]
+	RandomBytes_InPlace(nonce)
+	*index += NonceBytes_SecretBox
+	tokenData := buffer[*index:*index+ChallengeTokenBytes+HMACBytes_SecretBox]
+	WriteChallengeToken(buffer, index, token)
+	Encrypt_SecretBox(privateKey, nonce, tokenData, ChallengeTokenBytes)
+	*index += HMACBytes_SecretBox
+}
+
+func ReadEncryptedChallengeToken(buffer []byte, index *int, token *ChallengeToken, privateKey []byte) bool {
+	if len(buffer) - *index < EncryptedChallengeTokenBytes {
+		return false
+	}
+	nonce := buffer[*index:*index+NonceBytes_SecretBox]
+	*index += NonceBytes_SecretBox
+	tokenData := buffer[*index:*index+ChallengeTokenBytes+HMACBytes_SecretBox]
+	err := Decrypt_SecretBox(privateKey, nonce, tokenData, ChallengeTokenBytes+HMACBytes_SecretBox)	
+	if err != nil {
+		return false
+	}
+	result := ReadChallengeToken(buffer, index, token)
+	*index += HMACBytes_SecretBox
+	return result
+}
+*/
