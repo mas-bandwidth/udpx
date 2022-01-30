@@ -34,3 +34,14 @@ IDEAS
 
 	-------------
 	
+	There should be a access token and a way for this token to be refreshed at some period, to maintain connectivity to the system.
+
+	The gateway should just ignore any packets that don't have an up to date access token.
+
+	Access tokens can just be included with every payload packet.
+
+	Potentially, the client can avoid needing to update the access token entirely, if the server backend passes the updated token back down to the client every n seconds, this avoids the need to maintain additional connections.
+
+	This is definitely desirable.
+
+	-------------
