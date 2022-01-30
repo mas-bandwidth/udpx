@@ -514,7 +514,9 @@ func mainReturnWithCode() int {
 							core.Debug("ack packet %d", acks[i])
 							ackedPackets[acks[i]%SequenceBufferSize] = acks[i]
 							payloadAck := sequenceToPayloadId[acks[i]%SequenceBufferSize]
-							payloadAckQueue <- payloadAck
+							if payloadAck != ^uint64(0) {
+								payloadAckQueue <- payloadAck
+							}
 						}
 
 						// check if we have a new gateway

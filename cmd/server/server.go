@@ -53,12 +53,15 @@ import (
 const MaxPacketSize = 1500
 const SessionMapSwapTime = 60
 const SequenceBufferSize = 1024
+const QueueSize = 1024
 
 type SessionEntry struct {
 	SendSequence uint64
 	ReceiveSequence uint64
-	ReceivedPackets [SequenceBufferSize]uint64
 	AckedPackets [SequenceBufferSize]uint64
+	ReceivedPackets [SequenceBufferSize]uint64
+	SendPayloadId uint64
+	SequenceToPayloadId [SequenceBufferSize]uint64
 }
 
 // Allows us to return an exit code and allows log flushes and deferred functions
@@ -111,7 +114,7 @@ func mainReturnWithCode() int {
 		router.HandleFunc("/health", healthHandler).Methods("GET")
 		router.HandleFunc("/status", statusHandler).Methods("GET")
 
-		httpPort := envvar.Get("HTTP_PORT", "40000")
+		httpPort := envvar.Get("HTTP_PORT", "50000")
 
 		srv := &http.Server{
 			Addr:    ":" + httpPort,
@@ -184,11 +187,21 @@ func mainReturnWithCode() int {
 
 			for {
 
+				// read packet
+
 				packetBytes, _, err := conn.ReadFromUDP(buffer[:])
 				if err != nil {
 					core.Debug("failed to read udp packet: %v", err)
 					break
 				}
+
+				if packetBytes <= 0 {
+					continue
+				}
+
+				packetData := buffer[:packetBytes]
+
+				// swap session map periodically. times out old sessions without O(n) walk or contention
 
 				swapCount++
 				if swapCount > 100 {
@@ -201,11 +214,7 @@ func mainReturnWithCode() int {
 					}
 				}
 
-				if packetBytes <= 0 {
-					continue
-				}
-
-				packetData := buffer[:packetBytes]
+				// read packet
 
 				index := 0
 
@@ -285,12 +294,17 @@ func mainReturnWithCode() int {
 					ack_bits[30],
 					ack_bits[31])
 
+				// lookup or create a session entry
+
 				sessionEntry := sessionMap_New[sessionId]
 				if sessionEntry == nil {
 					sessionEntry = sessionMap_Old[sessionId]
 					if sessionEntry == nil {
 						// add new session entry
 						sessionEntry = &SessionEntry{SendSequence: ack+10000, ReceiveSequence: sequence}
+						for i := range sessionEntry.SequenceToPayloadId {
+							sessionEntry.SequenceToPayloadId[i] = ^uint64(0)
+						}
 						sessionMap_New[sessionId] = sessionEntry
 						core.Info("new session %s from %s", core.IdString(sessionId[:]), clientAddress.String())
 					} else {
@@ -304,30 +318,31 @@ func mainReturnWithCode() int {
 					panic("no session entry")
 				}
 
+				// update received packet reliability
+
 				if sessionEntry.ReceiveSequence < sequence {
 					sessionEntry.ReceiveSequence = sequence
 				}
 
 				sessionEntry.ReceivedPackets[sequence%SequenceBufferSize] = sequence
 
+				// validate payload (temporary)
+
 				payload := packetData[index:]
 
 				core.Debug("received packet %d from %s with %d byte payload", sequence, core.IdString(sessionId[:]), len(payload))
 
-				// todo: channel for payload
-				{
-					if len(payload) != core.MinPayloadBytes {
-						panic(fmt.Sprintf("payload size mismatch. expected %d, got %d\n", core.MinPayloadBytes, len(payload)))
-					}
+				if len(payload) != core.MinPayloadBytes {
+					panic(fmt.Sprintf("payload size mismatch. expected %d, got %d\n", core.MinPayloadBytes, len(payload)))
+				}
 
-					for i := 0; i < core.MinPayloadBytes; i++ {
-						if payload[i] != byte(i) {
-							panic(fmt.Sprintf("payload data mismatch at index %d. expected %d, got %d\n", i, byte(i), payload[i]))
-						}
+				for i := 0; i < core.MinPayloadBytes; i++ {
+					if payload[i] != byte(i) {
+						panic(fmt.Sprintf("payload data mismatch at index %d. expected %d, got %d\n", i, byte(i), payload[i]))
 					}
 				}
 
-				// process acks
+				// process packet acks
 
 				var ackBuffer [SequenceBufferSize]uint64
 
@@ -336,18 +351,20 @@ func mainReturnWithCode() int {
 				for i := range acks {
 					core.Debug("ack packet %d\n", acks[i])
 					sessionEntry.AckedPackets[acks[i]%SequenceBufferSize] = acks[i]
+					payloadAck := sessionEntry.SequenceToPayloadId[acks[i]%SequenceBufferSize]  
+					if payloadAck != ^uint64(0) {
+						core.Debug("ack payload %d for session %s", payloadAck, core.IdString(sessionId[:]))
+					}
 				}
 
-				// temporary: dummy response to test server -> gateway -> client packet delivery
+				// get response payload (temporary)
 
-				responsePacketData := make([]byte, MaxPacketSize)
-
-				dummyPayload := make([]byte, core.MinPayloadBytes)
+				responsePayload := make([]byte, core.MinPayloadBytes)
 				for i := 0; i < core.MinPayloadBytes; i++ {
-					dummyPayload[i] = byte(i)
+					responsePayload[i] = byte(i)
 				}
 
-				index = 0
+				// build response payload packet
 
 				version = byte(0)
 				flags = byte(0)
@@ -394,9 +411,11 @@ func mainReturnWithCode() int {
 					send_ack_bits[30],
 					send_ack_bits[31])
 
-				// ------------------
+				// write response payload packet
 
-				sessionEntry.SendSequence++
+				responsePacketData := make([]byte, MaxPacketSize)
+
+				index = 0
 
 				core.WriteUint8(responsePacketData, &index, version)
 				core.WriteUint8(responsePacketData, &index, core.PayloadPacket)
@@ -409,16 +428,24 @@ func mainReturnWithCode() int {
 				core.WriteBytes(responsePacketData, &index, serverId[:], core.ServerIdBytes)
 				core.WriteUint8(responsePacketData, &index, core.PayloadPacket)
 				core.WriteUint8(responsePacketData, &index, flags)
-				core.WriteBytes(responsePacketData, &index, dummyPayload, len(dummyPayload))
+				core.WriteBytes(responsePacketData, &index, responsePayload, len(responsePayload))
 
 				responsePacketBytes := index
 				responsePacketData = responsePacketData[:responsePacketBytes]
+
+				// send it to the client
 
 				if _, err := conn.WriteToUDP(responsePacketData, &gatewayInternalAddress); err != nil {
 					core.Error("failed to send response payload to gateway: %v", err)
 				}
 
 				core.Debug("send %d byte response to %s", responsePacketBytes, gatewayInternalAddress.String())
+
+				// update reliability
+
+				sessionEntry.SequenceToPayloadId[sessionEntry.SendPayloadId%SequenceBufferSize] = sessionEntry.SendPayloadId
+				sessionEntry.SendPayloadId++
+				sessionEntry.SendSequence++
 			}
 
 			wg.Done()
