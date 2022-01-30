@@ -1,84 +1,35 @@
 DONE
 
-	Clean up client code and make the main loop totally separate from any sequence numbers in clients.
-
-	The client needs to know what payloads get acked.
-
-	This can be a separate sequence number, implicit, starting at 0 for each payload sent.
-
-	Since bandwidth is not a serious concern, and scalability is, having a separate payload sequence
-	from the packet sequence is viable, and enables better scaling -- if the sequence number for packets
-	was exposed to the caller, it would create contention between threads when sending internal packets, 
-	and payload packets on the protocol.
-
-	Implement a payload ack channel, and push acks back down to the caller via it.
-
-	Clean up code across client/gateway/server/core
-
-	------------
-
-	I'd like to know the gateway id and the server id on the client.
-
-	This way the client has some logs that indicate which gateway instance it is connected to.
-
-	And then client session experiences can be tied to the gateway and server instances as it hops around.
-
-	Without this, it will be almost impossible to see what happens to a client session, when debugging something wrong in production across multiple gateways and server instances.
-
-	It seems the easiest way to do this is to extend the payload packet to include the server and gateway ids, when known.
-
-	This also lets the gateway and server do some additional verification to see that this session does in fact belong to them, and do edge detection when a session migrates in from a different gateway, or to a different server instance.
-
-	It seems that this edge detection is important.
-
-	The client also will see that it connects to different gateways and servers as its session goes on.
-
-	------------
-
-	Extended the client so it has concept of gateway id and server id and prints them out when they change.
-	
-	------------
-
-	Actually, I can't put the gateway id and server id after the session id. They must be later on in the packet, after the sequence number -- this part is encrypted.
-
-	Fix this in the client, and then get back to updating the gateway.
-
-	Extend the gateway so it is aware of the gateway id and server id in packets.
-
-	Gateway id should return the gateway id in the challenge packet
-
-	Client should stash the challenge gateway id along with the rest of the challenge data
-
-	Gateway should extend so it won't forward payload packets, unless the gateway id matches
-
-	This enforces the client having the correct gateway id in the encrypted part of the header
-
-	Client should use the challenge gateway id instead of the current gateway id, if the client has a challenge token
-
-	Client should now punch through and establish connectivity with the server.
-
-	Server now needs to be passed over to fix it so that it sends and receives packets of the right forward.
-
-	Insert the server id in payload packets sent down to the client via gateway.
-
-	Client should catch the server id and the gateway id and print them out.
-
-	Extend the server so it handles and fills in the server id portion of packets it sends and receives.
+	Setup a soak test harness so I can test it with a bunch of clients running at the same time
 
 TODO
 
 	------------
 
-	Setup a soak test harness so I can test it with a bunch of clients running at the same time
-
-	------------
-
 	Server also needs the concept of payload id and payload acks
+
+	The server should be setup such that there is a channel for payload sends per-session
+
+	When the session entry recieves a packet, it non-blocking walks over payload channel and sends any pending payloads down to the client.
+
+	There should also be a payload ack channel per-session, this should also get pumped after processing each packet from the session.
+
+	The whole idea is to avoid O(n) walk and drive everything on the server from the actual packets being received
+
+	This will slightly increase jitter (if the client has significant jitter), but it seems the best approach.
+
+	I can't see a server scaling if it has to have an internal tick rate and it pumps out send packets to 1000s of clients every 1/n seconds, with the amount of contention between the threads.
 
 	------------
 
 	Add test for the get ack bits function
 
 	Add test for the process acks function
+
+	------------
+
+	What's the next step?
+
+	It seems that getting the server configured so it has a bunch of channels, and these channels forward to services is the next step.
 
 	------------
