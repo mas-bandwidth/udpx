@@ -2,3 +2,62 @@ DONE
 
 TODO
 
+	Sketch out the session token
+
+	Sketch out the connect token
+
+	Add tests for read and write
+
+	Create a tool to generate a connect token and print it out to stdout as base64
+
+	When dev-client runs, take the connect token as input, and remove the other parameters (eg. gateway address, public key etc.)
+
+	Client should extract the gateway address, public key, session id from the connect token passed in.
+
+	Client should extract and store the session token from the connect token.
+
+	Extend core.go packet definition to include the session token in the prefix, after the chonkle.
+
+	Update client to include the session token in payload packets sent.
+
+	Update client to include the 
+
+	---------------
+
+	Update gateway to have session token in the payload packet.
+
+	Server does not need to see or know about the session token for now, keep it at the gateway level (like the chonkle).
+
+	Gateway decrypts the session token
+
+	If the session token doesn't decrypt, drop the packet
+
+	If the session token has expired, drop the packet.
+
+	If the session token session id does not match the packet session id, drop the packet.
+
+	If there is <= 10 seconds remaining until the session token expires, and the
+
+	---------------
+
+	Implement a new backend service "session_manager". Its job is to renew sessions when asked (extend them to expire 10 seconds in the future).
+
+	The clients don't talk directly to this system, the gateway talks to the session manager and does this.
+
+	The gateway needs a goroutine per-session entry. If the goroutine is nil, and <= 10 seconds remaining until expiry, create a goroutine that does the 
+
+	Use a channel to get the updated token back.
+
+	Once the token comes back, copy it to the session entry, then send it back down to the client in the payload packets.
+
+	---------------
+
+	On the client, if the session token in received valid packets is more recent than the current one (might need a 64bit sequence number per-session token, eg. every 10 secs?), then update the session token stored locally that will be sent up to the gateway with each packet sent.
+
+	---------------
+
+	At this point we should have a system where connect tokens are the only way to connect to the server, and the sessions may only stay active as long as the session manager continues to renew them.
+
+	Pretty badass.
+
+	---------------
