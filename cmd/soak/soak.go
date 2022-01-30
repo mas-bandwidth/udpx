@@ -33,14 +33,8 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 	"os"
 	"os/exec"
-	"reflect"
-	"runtime"
-	"strconv"
-	"strings"
-	"time"
 )
 
 const (
@@ -49,11 +43,11 @@ const (
 	serverBin  = "./dist/server"
 )
 
-func server() (*exec.Cmd, *bytes.Buffer) {
+func client() (*exec.Cmd, *bytes.Buffer) {
 
-	cmd := exec.Command(serverBin)
+	cmd := exec.Command(clientBin)
 	if cmd == nil {
-		panic("could not create server!\n")
+		panic("could not create client!\n")
 		return nil, nil
 	}
 
@@ -72,11 +66,46 @@ func server() (*exec.Cmd, *bytes.Buffer) {
 	return cmd, &output
 }
 
+func gateway() (*exec.Cmd, *bytes.Buffer) {
+
+	cmd := exec.Command(gatewayBin)
+	if cmd == nil {
+		panic("could not create gateway!\n")
+		return nil, nil
+	}
+
+	/*
+	if mode != "" {
+		cmd.Env = os.Environ()
+		cmd.Env = append(cmd.Env, fmt.Sprintf("BACKEND_MODE=%s", mode))
+	}
+	*/
+
+	// var output bytes.Buffer
+	// cmd.Stdout = &output
+	// cmd.Stderr = &output
+	cmd.Start()
+
+	return cmd, nil // &output
+}
+
+func server() *exec.Cmd {
+	cmd := exec.Command(serverBin)
+	if cmd == nil {
+		panic("could not create server!\n")
+		return nil
+	}
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Start()
+	return cmd
+}
+
 func soak() {
 
-	fmt.Printf("soak\n")
+	server_cmd := server()
 
-	backend_cmd, backend_stdout := backend()
+	server_cmd.Wait()
 
 	/*
 	backend_cmd.Wait()

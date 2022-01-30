@@ -37,6 +37,12 @@ build-keygen: dist
 	@$(GO) build -o ${DIST_DIR}/keygen ./cmd/keygen/keygen.go
 	@printf "done\n"
 
+.PHONY: build-soak
+build-soak: dist build-client build-server build-gateway
+	@printf "Building soak... "
+	@$(GO) build -o ${DIST_DIR}/soak ./cmd/soak/soak.go
+	@printf "done\n"
+
 .PHONY: dev-client
 dev-client: build-client ## runs a local client
 	UDP_PORT=30000 CLIENT_ADDRESS=127.0.0.1:30000 GATEWAY_ADDRESS=127.0.0.1:40000 GATEWAY_PUBLIC_KEY=vnIjsJWZzgq+nS9t3KU7ch5BFhgDkm2U2bm7/2W6eRs= ./dist/client
@@ -52,6 +58,10 @@ dev-server: build-server ## runs a local server
 .PHONY: keygen
 keygen: build-keygen ## generate keypair
 	./dist/keygen
+
+.PHONY: soak test
+soak: build-soak ## run soak test
+	./dist/soak
 
 .PHONY: test
 test: ## runs unit tests
