@@ -54,13 +54,13 @@ func main() {
 		return
 	}
 
-	sessionPrivateKey, err := envvar.GetBase64("SESSION_PRIVATE_KEY", nil)
-	if err != nil || len(sessionPrivateKey) != core.PrivateKeyBytes_Box {
-		core.Error("missing or invalid SESSION_PRIVATE_KEY: %v", err)
+	authPrivateKey, err := envvar.GetBase64("AUTH_PRIVATE_KEY", nil)
+	if err != nil || len(authPrivateKey) != core.PrivateKeyBytes_Box {
+		core.Error("missing or invalid AUTH_PRIVATE_KEY: %v", err)
 		return
 	}
 
-	connect_token := core.GenerateConnectToken(userId[:], gatewayAddress, gatewayPublicKey[:], sessionPrivateKey, gatewayPublicKey)
+	connect_token := core.GenerateConnectToken(userId[:], gatewayAddress, gatewayPublicKey[:], authPrivateKey, gatewayPublicKey)
 
 	connect_token_base64 := base64.StdEncoding.EncodeToString(connect_token)
 

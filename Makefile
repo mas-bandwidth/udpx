@@ -5,7 +5,7 @@ CURRENT_DIR = $(shell pwd -P)
 DEPLOY_DIR = ./deploy
 DIST_DIR = ./dist
 
-CONNECT_TOKEN := $(shell GATEWAY_ADDRESS=127.0.0.1:40000 GATEWAY_PUBLIC_KEY=vnIjsJWZzgq+nS9t3KU7ch5BFhgDkm2U2bm7/2W6eRs= SESSION_PRIVATE_KEY=eeGgZHccnBNQZpHWqF4AB+UFvQL//MbIJ/o7wK/oXZc= ./dist/connect_token)
+CONNECT_TOKEN := $(shell GATEWAY_ADDRESS=127.0.0.1:40000 GATEWAY_PUBLIC_KEY=vnIjsJWZzgq+nS9t3KU7ch5BFhgDkm2U2bm7/2W6eRs= AUTH_PRIVATE_KEY=eeGgZHccnBNQZpHWqF4AB+UFvQL//MbIJ/o7wK/oXZc= ./dist/connect_token)
 
 .PHONY: help
 help:
@@ -57,7 +57,7 @@ dev-client: build-connect-token build-client ## runs a local client
 
 .PHONY: dev-gateway
 dev-gateway: build-gateway ## runs a local gateway
-	HTTP_PORT=40000 UDP_PORT=40000 GATEWAY_ADDRESS=127.0.0.1:40000 GATEWAY_INTERNAL_ADDRESS=127.0.0.1:40001 GATEWAY_PRIVATE_KEY=qmnxBZs2UElVT4SXCdDuX4td+qtPkuXLL5VdOE0vvcA= SESSION_PRIVATE_KEY=uKCWrFe/MR2Vqq1MbX/mGhB2dnXUs319uXjTqCIwmHM= SERVER_ADDRESS=127.0.0.1:50000 ./dist/gateway
+	HTTP_PORT=40000 UDP_PORT=40000 GATEWAY_ADDRESS=127.0.0.1:40000 GATEWAY_INTERNAL_ADDRESS=127.0.0.1:40001 GATEWAY_PRIVATE_KEY=qmnxBZs2UElVT4SXCdDuX4td+qtPkuXLL5VdOE0vvcA= AUTH_PRIVATE_KEY=uKCWrFe/MR2Vqq1MbX/mGhB2dnXUs319uXjTqCIwmHM= SERVER_ADDRESS=127.0.0.1:50000 ./dist/gateway
 
 .PHONY: dev-server
 dev-server: build-server ## runs a local server
@@ -65,7 +65,7 @@ dev-server: build-server ## runs a local server
 
 .PHONY: connect-token
 connect-token: build-connect-token ## generate connect token
-	GATEWAY_ADDRESS=127.0.0.1:40000 GATEWAY_PUBLIC_KEY=vnIjsJWZzgq+nS9t3KU7ch5BFhgDkm2U2bm7/2W6eRs= SESSION_PRIVATE_KEY=eeGgZHccnBNQZpHWqF4AB+UFvQL//MbIJ/o7wK/oXZc= ./dist/connect_token
+	GATEWAY_ADDRESS=127.0.0.1:40000 GATEWAY_PUBLIC_KEY=vnIjsJWZzgq+nS9t3KU7ch5BFhgDkm2U2bm7/2W6eRs= AUTH_PRIVATE_KEY=eeGgZHccnBNQZpHWqF4AB+UFvQL//MbIJ/o7wK/oXZc= ./dist/connect_token
 
 .PHONY: keygen
 keygen: build-keygen ## generate keypair
