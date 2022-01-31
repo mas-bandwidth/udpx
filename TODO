@@ -48,10 +48,6 @@ DONE
 
 	Client connects.
 
-TODO
-
-	---------------
-
 	Gateway decrypts the session token
 
 	If the session token doesn't decrypt, drop the packet
@@ -60,15 +56,17 @@ TODO
 
 	If the session token session id does not match the packet session id, drop the packet.
 
-	---------------
-
 	At this point the client should connect, have 20 seconds of grace, and then the gateway will drop all packets because the session token has expired.
+
+	Confirmed.
+
+TODO
 
 	---------------
 
 	Implement a new backend service "auth". 
 
-	Its job is to generate connect tokens when asked, and to extend session tokens while a session is connected.
+	Its job is to generate connect tokens when asked for a given user id, and to extend session tokens while a session is connected.
 
 	The backend is presumed to talk to auth to get the initial connect token.
 
@@ -76,15 +74,27 @@ TODO
 
 	The clients don't talk directly to this system. It's a private system the backend uses.
 
-	The gateway needs a goroutine per-session entry. If the goroutine is nil, and <= 10 seconds remaining until expiry, create a goroutine that does the session extension.
+	---------------
 
-	Use a channel to get the updated token back.
+	The gateway needs a goroutine per-session entry to update the session token. 
+
+	If the goroutine is nil, and <= 10 seconds remaining until expiry, create a goroutine that does the session extension.
+
+	Use a channel to get the updated token back... poll this channel non-blocking on packets received for that session.
 
 	Once the token comes back, copy it to the session entry, then send it back down to the client in the payload packets.
 
 	---------------
 
-	On the client, if the session token in received valid packets is more recent than the current one (might need a 64bit sequence number per-session token, eg. every 10 secs?), then update the session token stored locally that will be sent up to the gateway with each packet sent.
+	Extend the packet structure to have a session token sequence number (uint64) before the session token.
+
+	On the gateway, increase the session token sequence each time the session token is updated on the gateway.
+
+	---------------
+
+	On the client, if the session token in received has a more recent sequence number than the current session token, update the stored session token and sequence number.
+
+	On the client, if the session token is more than 20 seconds old, expire the session token and time out the client (quit).
 
 	---------------
 

@@ -87,6 +87,9 @@ const Flags_ChallengeToken = (1 << 0)
 
 const ChallengePacketBytes = PrefixBytes + NonceBytes_Box + EncryptedChallengeTokenBytes + SequenceBytes + GatewayIdBytes + PostfixBytes
 
+const ConnectTokenExpireSeconds = 20
+const SessionTokenExtensionSeconds = 10
+
 func Keygen_Box() ([]byte, []byte) {
 	var publicKey [PublicKeyBytes_Box]byte
 	var privateKey [PrivateKeyBytes_Box]byte
@@ -793,7 +796,7 @@ func GenerateConnectToken(userId []byte, gatewayAddress *net.UDPAddr, gatewayPub
 	copy(connectData.GatewayPublicKey[:], gatewayPublicKey[:])
 
 	sessionToken := SessionToken{}
-	sessionToken.ExpireTimestamp = uint64(time.Now().Unix())
+	sessionToken.ExpireTimestamp = uint64(time.Now().Unix()) + ConnectTokenExpireSeconds
 	copy(sessionToken.SessionId[:], connectData.ClientPublicKey[:])
 	copy(sessionToken.UserId[:], userId[:])
 

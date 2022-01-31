@@ -287,18 +287,40 @@ func mainReturnWithCode() int {
 					// verify session token
 
 					sessionTokenIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes
-					sessionToken := packetData[sessionTokenIndex:sessionTokenIndex+core.EncryptedSessionTokenBytes]
+					sessionTokenData := packetData[sessionTokenIndex:sessionTokenIndex+core.EncryptedSessionTokenBytes]
 
-					// todo
-					_ = sessionToken
+					index := 0
+					var sessionToken core.SessionToken
+					result := core.ReadEncryptedSessionToken(sessionTokenData, &index, &sessionToken, authPublicKey, gatewayPrivateKey)
+					if !result {
+						// todo: debug
+						core.Error("could not decrypt session token")
+						continue
+					}
+
+					if sessionToken.ExpireTimestamp < uint64(time.Now().Unix()) {
+						// todo: debug
+						core.Error("session token has expired")
+						continue
+					}
+
+					sessionIdIndex := core.PrefixBytes
+
+					senderPublicKey := packetData[sessionIdIndex : sessionIdIndex+core.SessionIdBytes]
+
+					var sessionId [core.SessionIdBytes]byte
+					copy(sessionId[:], senderPublicKey[:])
+
+					if !core.IdEqual(sessionToken.SessionId[:], sessionId[:]) {
+						core.Error("session id mismatch")
+						continue
+					}
 
 					// decrypt packet
 
-					sessionIdIndex := core.PrefixBytes
 					sequenceIndex := sessionIdIndex + core.SessionIdBytes
 					encryptedDataIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes + core.EncryptedSessionTokenBytes + core.SessionIdBytes + core.SequenceBytes
 
-					senderPublicKey := packetData[sessionIdIndex : sessionIdIndex+core.SessionIdBytes]
 					sequenceData := packetData[sequenceIndex : sequenceIndex+core.SequenceBytes]
 					encryptedData := packetData[encryptedDataIndex : packetBytes-core.PittleBytes]
 
@@ -334,7 +356,7 @@ func mainReturnWithCode() int {
 
 					// get packet sequence number
 
-					index := 0
+					index = 0
 					sequence := uint64(0)
 					core.ReadUint64(sequenceData, &index, &sequence)
 
@@ -363,11 +385,6 @@ func mainReturnWithCode() int {
 					// process payload packet
 
 					core.Debug("payload is %d bytes", len(payload))
-
-					var sessionId [core.SessionIdBytes]byte
-					for i := 0; i < core.SessionIdBytes; i++ {
-						sessionId[i] = senderPublicKey[i]
-					}
 
 					sessionEntry := sessionMap_New[sessionId]
 					if sessionEntry == nil {
