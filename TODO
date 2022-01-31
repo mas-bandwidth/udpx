@@ -8,33 +8,45 @@ DONE
 
 	Add tests for connect data
 
-TODO
-
-	--------
-
 	Write function to generate connect token, inputs are gateway address, gateway public key. generates random session id.
-
-	--------
 
 	Create a tool to generate a connect token and print it out to stdout as base64
 
-	--------
+	How to pass the connect token from the tool into dev-client when it runs?
 
-	When dev-client runs, take the connect token as input, and remove the other parameters (eg. gateway address, public key etc.)
+	Make shell command will do it.
 
-	Client should extract the gateway address, public key, session id from the connect token passed in.
+TODO
 
-	Client should extract and store the session token from the connect token.
+	Whoops, connect data also needs public/private keypair.
 
-	Extend core.go packet definition to include the session token in the prefix, after the chonkle.
+	Can't just generate a random session id, it must be one half of a keypair, by design.
 
-	Update client to include the session token in payload packets sent.
-
-	Update client to include the 
+	I'm not sure I want the backend generating the ephemeral client keypair. That seems wrong.
 
 	---------------
 
-	Update gateway to have session token in the payload packet.
+	Client now has connect token passed in via env var.
+
+	Read in the env var, and then base64 decode and check the size of the byte array.
+
+	Client needs to read the gateway address, gateway public key and session id from the connect token passed in.
+
+	Client should extract and store the session token from the connect token.
+
+	Now the client should connect as usual...
+
+	---------------
+
+	Extend core.go packet definition to include the session token in the prefix, after the chonkle.
+
+	Update client to include the session token in packets sent.
+
+	Update client to include the session token in packets received.
+
+	---------------
+
+	Update gateway to have session token in the payload packet on read and write.
 
 	Server does not need to see or know about the session token for now, keep it at the gateway level (like the chonkle).
 

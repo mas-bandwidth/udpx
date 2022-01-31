@@ -5,6 +5,8 @@ CURRENT_DIR = $(shell pwd -P)
 DEPLOY_DIR = ./deploy
 DIST_DIR = ./dist
 
+CONNECT_TOKEN := $(shell GATEWAY_ADDRESS=127.0.0.1:40000 GATEWAY_PUBLIC_KEY=vnIjsJWZzgq+nS9t3KU7ch5BFhgDkm2U2bm7/2W6eRs= SESSION_PRIVATE_KEY=eeGgZHccnBNQZpHWqF4AB+UFvQL//MbIJ/o7wK/oXZc= ./dist/connect_token)
+
 .PHONY: help
 help:
 	@echo "$$(grep -hE '^\S+:.*##' $(MAKEFILE_LIST) | sed -e 's/:.*##\s*/:/' -e 's/^\(.\+\):\(.*\)/\\033[36m\1\\033[m:\2/' | column -c2 -t -s :)"
@@ -50,8 +52,8 @@ build-soak: dist build-client build-server build-gateway
 	@printf "done\n"
 
 .PHONY: dev-client
-dev-client: build-client ## runs a local client
-	UDP_PORT=30000 CLIENT_ADDRESS=127.0.0.1:30000 GATEWAY_ADDRESS=127.0.0.1:40000 GATEWAY_PUBLIC_KEY=vnIjsJWZzgq+nS9t3KU7ch5BFhgDkm2U2bm7/2W6eRs= ./dist/client
+dev-client: build-connect-token build-client ## runs a local client
+	UDP_PORT=30000 CLIENT_ADDRESS=127.0.0.1:30000 CONNECT_TOKEN=$(CONNECT_TOKEN) ./dist/client
 
 .PHONY: dev-gateway
 dev-gateway: build-gateway ## runs a local gateway

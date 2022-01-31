@@ -431,8 +431,11 @@ func TestConnectData(t *testing.T) {
 
 	t.Parallel()
 
+	publicKey, privateKey := Keygen_Box()
+
 	connectData := ConnectData{}
-	RandomBytes_InPlace(connectData.SessionId[:])
+	copy(connectData.SessionPublicKey[:], publicKey)
+	copy(connectData.SessionPrivateKey[:], privateKey)
 	connectData.GatewayAddress = *ParseAddress("127.0.0.1:40000")
 	RandomBytes_InPlace(connectData.GatewayPublicKey[:])
 

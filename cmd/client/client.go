@@ -82,6 +82,8 @@ func mainReturnWithCode() int {
 		return 1
 	}
 
+	// todo: get gateway address, public key, and session public/private keypair from connect token
+
 	gatewayAddress, err := envvar.GetAddress("GATEWAY_ADDRESS", core.ParseAddress("127.0.0.1:40000"))
 	if err != nil {
 		core.Error("invalid GATEWAY_ADDRESS: %v", err)

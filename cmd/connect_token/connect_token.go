@@ -64,5 +64,5 @@ func main() {
 
 	connect_token_base64 := base64.StdEncoding.EncodeToString(connect_token)
 
-	fmt.Printf("connect token: %s\n", connect_token_base64)
+	fmt.Printf("%s\n", connect_token_base64)
 }
