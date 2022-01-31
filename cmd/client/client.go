@@ -82,27 +82,28 @@ func mainReturnWithCode() int {
 		return 1
 	}
 
-	// todo: get gateway address, public key, and session public/private keypair from connect token
-
-	gatewayAddress, err := envvar.GetAddress("GATEWAY_ADDRESS", core.ParseAddress("127.0.0.1:40000"))
-	if err != nil {
-		core.Error("invalid GATEWAY_ADDRESS: %v", err)
+	connectToken, err := envvar.GetBase64("CONNECT_TOKEN", nil)
+	if err != nil || len(connectToken) != core.ConnectTokenBytes {
+		core.Error("missing or invalid CONNECT_TOKEN: %v", err)
 		return 1
 	}
 
-	gatewayPublicKey, err := envvar.GetBase64("GATEWAY_PUBLIC_KEY", nil)
-	if err != nil || len(gatewayPublicKey) != core.PublicKeyBytes_Box {
-		core.Error("missing or invalid GATEWAY_PUBLIC_KEY: %v", err)
+	index := 0
+	var connectData core.ConnectData
+	if !core.ReadConnectData(connectToken, &index, &connectData) {
+		core.Error("invalid connect data")
 		return 1
 	}
 
-	clientPublicKey, clientPrivateKey := core.Keygen_Box()
-
+	sessionToken := connectToken[core.ConnectDataBytes:]
+	gatewayAddress := &connectData.GatewayAddress
+	gatewayPublicKey := connectData.GatewayPublicKey[:]
+	clientPublicKey := connectData.ClientPublicKey[:]
+	clientPrivateKey := connectData.ClientPrivateKey[:]
 	sessionId := clientPublicKey
 
-	if len(sessionId) != core.SessionIdBytes {
-		panic(fmt.Sprintf("public key must be %d bytes", core.SessionIdBytes))
-	}
+	// todo
+	_ = sessionToken
 
 	var gatewayId [core.GatewayIdBytes]byte
 	var serverId [core.ServerIdBytes]byte

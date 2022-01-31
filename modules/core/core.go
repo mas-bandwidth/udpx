@@ -750,17 +750,17 @@ func ReadEncryptedSessionToken(buffer []byte, index *int, token *SessionToken, s
 }
 
 type ConnectData struct {
-	SessionPublicKey  [PublicKeyBytes_Box]byte
-	SessionPrivateKey [PrivateKeyBytes_Box]byte
-	GatewayAddress    net.UDPAddr
-	GatewayPublicKey  [PublicKeyBytes_Box]byte
+	ClientPublicKey  [PublicKeyBytes_Box]byte
+	ClientPrivateKey [PrivateKeyBytes_Box]byte
+	GatewayAddress   net.UDPAddr
+	GatewayPublicKey [PublicKeyBytes_Box]byte
 }
 
 const ConnectDataBytes = PublicKeyBytes_Box + PrivateKeyBytes_Box + AddressBytes + PublicKeyBytes_Box
 
 func WriteConnectData(buffer []byte, index *int, connectData *ConnectData) {
-	WriteBytes(buffer, index, connectData.SessionPublicKey[:], PublicKeyBytes_Box)
-	WriteBytes(buffer, index, connectData.SessionPrivateKey[:], PrivateKeyBytes_Box)
+	WriteBytes(buffer, index, connectData.ClientPublicKey[:], PublicKeyBytes_Box)
+	WriteBytes(buffer, index, connectData.ClientPrivateKey[:], PrivateKeyBytes_Box)
 	WriteAddress(buffer, index, &connectData.GatewayAddress)
 	WriteBytes(buffer, index, connectData.GatewayPublicKey[:], UserIdBytes)
 }
@@ -769,26 +769,28 @@ func ReadConnectData(buffer []byte, index *int, connectData *ConnectData) bool {
 	if len(buffer)-*index < ConnectDataBytes {
 		return false
 	}
-	ReadBytes(buffer, index, connectData.SessionPublicKey[:], PublicKeyBytes_Box)
-	ReadBytes(buffer, index, connectData.SessionPrivateKey[:], PrivateKeyBytes_Box)
+	ReadBytes(buffer, index, connectData.ClientPublicKey[:], PublicKeyBytes_Box)
+	ReadBytes(buffer, index, connectData.ClientPrivateKey[:], PrivateKeyBytes_Box)
 	ReadAddress(buffer, index, &connectData.GatewayAddress)
 	ReadBytes(buffer, index, connectData.GatewayPublicKey[:], PublicKeyBytes_Box)
 	return true
 }
+
+const ConnectTokenBytes = ConnectDataBytes + EncryptedSessionTokenBytes
 
 func GenerateConnectToken(userId []byte, gatewayAddress *net.UDPAddr, gatewayPublicKey []byte, senderPrivateKey []byte, receiverPublicKey []byte) []byte {
 
 	publicKey, privateKey := Keygen_Box()
 
 	connectData := ConnectData{}
-	copy(connectData.SessionPublicKey[:], publicKey[:])
-	copy(connectData.SessionPrivateKey[:], privateKey[:])
+	copy(connectData.ClientPublicKey[:], publicKey[:])
+	copy(connectData.ClientPrivateKey[:], privateKey[:])
 	connectData.GatewayAddress = *gatewayAddress
 	copy(connectData.GatewayPublicKey[:], gatewayPublicKey[:])
 
 	sessionToken := SessionToken{}
 	sessionToken.ExpireTimestamp = uint64(time.Now().Unix())
-	copy(sessionToken.SessionId[:], connectData.SessionPublicKey[:])
+	copy(sessionToken.SessionId[:], connectData.ClientPublicKey[:])
 	copy(sessionToken.UserId[:], userId[:])
 
 	buffer := make([]byte, ConnectDataBytes+EncryptedSessionTokenBytes)
@@ -801,3 +803,4 @@ func GenerateConnectToken(userId []byte, gatewayAddress *net.UDPAddr, gatewayPub
 
 	return buffer
 }
+

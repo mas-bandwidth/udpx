@@ -16,13 +16,11 @@ DONE
 
 	Make shell command will do it.
 
-TODO
-
 	Whoops, connect data also needs public/private keypair.
 
 	Can't just generate a random session id, it must be one half of a keypair, by design.
 
-	I'm not sure I want the backend generating the ephemeral client keypair. That seems wrong.
+TODO
 
 	---------------
 
