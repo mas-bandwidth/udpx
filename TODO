@@ -6,9 +6,9 @@ DONE
 
 	Add tests for read and write session token, encrypt/decrypt etc.
 
-TODO
-
 	Add tests for connect data
+
+TODO
 
 	--------
 
@@ -17,6 +17,8 @@ TODO
 	--------
 
 	Create a tool to generate a connect token and print it out to stdout as base64
+
+	--------
 
 	When dev-client runs, take the connect token as input, and remove the other parameters (eg. gateway address, public key etc.)
 

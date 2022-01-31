@@ -40,6 +40,7 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
+	"time"
 	"hash/fnv"
 	"math"
 	"net"
@@ -754,6 +755,14 @@ type ConnectData struct {
 	GatewayPublicKey [PublicKeyBytes_Box]byte
 }
 
+/*
+type SessionToken struct {
+	ExpireTimestamp uint64
+	SessionId [SessionIdBytes]byte
+	UserId [UserIdBytes]byte
+}
+*/
+
 const ConnectDataBytes = SessionIdBytes + AddressBytes + PublicKeyBytes_Box
 
 func WriteConnectData(buffer []byte, index *int, connectData *ConnectData) {
@@ -770,4 +779,27 @@ func ReadConnectData(buffer []byte, index *int, connectData *ConnectData) bool {
 	ReadAddress(buffer, index, &connectData.GatewayAddress)
 	ReadBytes(buffer, index, connectData.GatewayPublicKey[:], PublicKeyBytes_Box)
 	return true
+}
+
+func GenerateConnectToken(userId [UserIdBytes]byte, gatewayAddress *net.UDPAddr, gatewayPublicKey []byte, senderPrivateKey []byte, receiverPublicKey []byte) []byte {
+
+	connectData := ConnectData{}
+	RandomBytes_InPlace(connectData.SessionId[:])
+	connectData.GatewayAddress = *gatewayAddress
+	copy(connectData.GatewayPublicKey[:], gatewayPublicKey[:])
+
+	sessionToken := SessionToken{}
+	sessionToken.ExpireTimestamp = uint64(time.Now().Unix())
+	copy(sessionToken.SessionId[:], connectData.SessionId[:])
+	copy(sessionToken.UserId[:], userId[:])
+
+	buffer := make([]byte, ConnectDataBytes + EncryptedSessionTokenBytes)
+
+	index := 0
+
+	WriteConnectData(buffer, &index, &connectData)
+
+	WriteEncryptedSessionToken(buffer, &index, &sessionToken, senderPrivateKey, receiverPublicKey)
+
+	return buffer
 }
