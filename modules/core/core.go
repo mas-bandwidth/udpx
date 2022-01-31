@@ -754,7 +754,7 @@ type ConnectData struct {
 	GatewayPublicKey [PublicKeyBytes_Box]byte
 }
 
-const ConnectDataBytes = 8 + AddressBytes + PublicKeyBytes_Box
+const ConnectDataBytes = SessionIdBytes + AddressBytes + PublicKeyBytes_Box
 
 func WriteConnectData(buffer []byte, index *int, connectData *ConnectData) {
 	WriteBytes(buffer, index, connectData.SessionId[:], SessionIdBytes)
@@ -767,7 +767,7 @@ func ReadConnectData(buffer []byte, index *int, connectData *ConnectData) bool {
 		return false
 	}
 	ReadBytes(buffer, index, connectData.SessionId[:], SessionIdBytes)
-	WriteAddress(buffer, index, &connectData.GatewayAddress)
+	ReadAddress(buffer, index, &connectData.GatewayAddress)
 	ReadBytes(buffer, index, connectData.GatewayPublicKey[:], PublicKeyBytes_Box)
 	return true
 }

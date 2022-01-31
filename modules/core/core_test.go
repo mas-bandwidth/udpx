@@ -373,11 +373,6 @@ func TestSessionToken(t *testing.T) {
 	RandomBytes_InPlace(sessionToken.SessionId[:])
 	RandomBytes_InPlace(sessionToken.UserId[:])
 
-	_ = senderPublicKey
-	_ = senderPrivateKey
-	_ = receiverPublicKey
-	_ = receiverPrivateKey
-
 	// write the session token to a buffer and read it back in
 
 	buffer := make([]byte, EncryptedSessionTokenBytes)
@@ -431,3 +426,42 @@ func TestSessionToken(t *testing.T) {
 	result = ReadEncryptedSessionToken(buffer, &index, &readSessionToken, senderPublicKey, receiverPrivateKey)
 	assert.False(t, result)
 }
+
+func TestConnectData(t *testing.T) {
+
+	t.Parallel()
+
+	connectData := ConnectData{}
+	RandomBytes_InPlace(connectData.SessionId[:])
+	connectData.GatewayAddress = *ParseAddress("127.0.0.1:40000")
+	RandomBytes_InPlace(connectData.GatewayPublicKey[:])
+
+	// write the connect data to a buffer and read it back in
+
+	buffer := make([]byte, ConnectDataBytes)
+
+	index := 0
+
+	WriteConnectData(buffer, &index, &connectData)
+	
+	assert.Equal(t, index, ConnectDataBytes)
+
+	var readConnectData ConnectData
+
+	index = 0
+
+	result := ReadConnectData(buffer, &index, &readConnectData)
+
+	assert.True(t, result)
+	assert.Equal(t, connectData, readConnectData)
+	assert.Equal(t, index, ConnectDataBytes)
+
+	// can't read connect data if the buffer is too small
+
+	index = 0
+
+	result = ReadConnectData(buffer[:5], &index, &readConnectData)
+
+	assert.False(t, result)
+}
+

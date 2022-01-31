@@ -4,9 +4,9 @@ DONE
 
 	Sketch out connect data
 
-TODO
-
 	Add tests for read and write session token, encrypt/decrypt etc.
+
+TODO
 
 	Add tests for connect data
 
