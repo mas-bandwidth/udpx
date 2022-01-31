@@ -20,10 +20,6 @@ DONE
 
 	Can't just generate a random session id, it must be one half of a keypair, by design.
 
-TODO
-
-	---------------
-
 	Client now has connect token passed in via env var.
 
 	Read in the env var, and then base64 decode and check the size of the byte array.
@@ -34,13 +30,17 @@ TODO
 
 	Now the client should connect as usual...
 
+	Confirmed.
+
+TODO
+
 	---------------
 
 	Extend core.go packet definition to include the session token in the prefix, after the chonkle.
 
 	Update client to include the session token in packets sent.
 
-	Update client to include the session token in packets received.
+	Update client to read the session token in packets received.
 
 	---------------
 
@@ -56,15 +56,23 @@ TODO
 
 	If the session token session id does not match the packet session id, drop the packet.
 
-	If there is <= 10 seconds remaining until the session token expires, and the
+	---------------
+
+	At this point the client should connect, have 20 seconds of grace, and then the gateway will drop all packets because the session token has expired.
 
 	---------------
 
-	Implement a new backend service "session_manager". Its job is to renew sessions when asked (extend them to expire 10 seconds in the future).
+	Implement a new backend service "auth". 
 
-	The clients don't talk directly to this system, the gateway talks to the session manager and does this.
+	Its job is to generate connect tokens when asked, and to extend session tokens while a session is connected.
 
-	The gateway needs a goroutine per-session entry. If the goroutine is nil, and <= 10 seconds remaining until expiry, create a goroutine that does the 
+	The backend is presumed to talk to auth to get the initial connect token.
+
+	The gateway talks to auth to extend the session token +10 seconds.
+
+	The clients don't talk directly to this system. It's a private system the backend uses.
+
+	The gateway needs a goroutine per-session entry. If the goroutine is nil, and <= 10 seconds remaining until expiry, create a goroutine that does the session extension.
 
 	Use a channel to get the updated token back.
 
@@ -79,5 +87,21 @@ TODO
 	At this point we should have a system where connect tokens are the only way to connect to the server, and the sessions may only stay active as long as the session manager continues to renew them.
 
 	Pretty badass.
+
+	---------------
+
+	Extend the connect data and session token to include the up/down bandwidth envelope in kbps.
+
+	---------------
+
+	Enforce this bandwidth envelope on the client via choke.
+
+	---------------
+
+	Enforce this bandwidth envelope on the gateway via dropping any additional packets above the envelope.
+
+	---------------
+
+	Enforce this bandwidth envelope on the server via choke.
 
 	---------------
