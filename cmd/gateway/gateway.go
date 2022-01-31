@@ -61,7 +61,7 @@ const OldSequenceThreshold = 100
 
 type SessionEntry struct {
 	ReceivedSequence uint64
-	ReceivedPackets [OldSequenceThreshold]uint64
+	ReceivedPackets  [OldSequenceThreshold]uint64
 }
 
 func main() {
@@ -302,13 +302,13 @@ func mainReturnWithCode() int {
 					// split packet into various pieces
 
 					headerIndex := core.PrefixBytes
-					
+
 					payloadIndex := headerIndex + core.HeaderBytes
 					payloadBytes := packetBytes - payloadIndex - core.PostfixBytes
 
-					header := packetData[headerIndex:headerIndex+core.HeaderBytes]
+					header := packetData[headerIndex : headerIndex+core.HeaderBytes]
 
-					payload := packetData[payloadIndex:payloadIndex+payloadBytes]
+					payload := packetData[payloadIndex : payloadIndex+payloadBytes]
 
 					// ignore packet types we don't support
 
@@ -325,7 +325,7 @@ func mainReturnWithCode() int {
 					core.ReadUint64(sequenceData, &index, &sequence)
 
 					// get packet gateway id
-					
+
 					gatewayIdIndex := headerIndex + core.SessionIdBytes + core.SequenceBytes + core.AckBytes + core.AckBitsBytes
 
 					index = 0
@@ -336,15 +336,15 @@ func mainReturnWithCode() int {
 
 					flagsIndex := core.SessionIdBytes + core.SequenceBytes + core.AckBytes + core.AckBitsBytes + core.GatewayIdBytes + core.ServerIdBytes + core.PacketTypeBytes
 					var challengeTokenData []byte
-					hasChallengeToken := ( header[flagsIndex] & core.Flags_ChallengeToken ) != 0
+					hasChallengeToken := (header[flagsIndex] & core.Flags_ChallengeToken) != 0
 					if hasChallengeToken {
 						challengeTokenData = payload[0:core.EncryptedChallengeTokenBytes]
 						payload = payload[core.EncryptedChallengeTokenBytes:]
-					}				
+					}
 
 					// clear flags in header
 
-					header[flagsIndex] = 0	
+					header[flagsIndex] = 0
 
 					// process payload packet
 
@@ -405,23 +405,23 @@ func mainReturnWithCode() int {
 							// respond with a challenge
 
 							challengePacketData := make([]byte, MaxPacketSize)
-							
+
 							challengeToken := core.ChallengeToken{}
 							challengeToken.ExpireTimestamp = uint64(time.Now().Unix() + ChallengeTokenTimeout)
 							challengeToken.ClientAddress = *from
 							challengeToken.Sequence = sequence
-							
+
 							nonce := [core.NonceBytes_Box]byte{}
 							core.RandomBytes_InPlace(nonce[:])
-							nonce[9] &= 1^(1<<0)
-							nonce[9] |= (1<<1)
+							nonce[9] &= 1 ^ (1 << 0)
+							nonce[9] |= (1 << 1)
 
 							index := 0
 
 							version := byte(0)
 							core.WriteUint8(challengePacketData, &index, version)
 							core.WriteUint8(challengePacketData, &index, core.ChallengePacket)
-							chonkle := challengePacketData[index:index+core.ChonkleBytes]
+							chonkle := challengePacketData[index : index+core.ChonkleBytes]
 							index += core.ChonkleBytes
 							core.WriteBytes(challengePacketData, &index, nonce[:], core.NonceBytes_Box)
 							encryptStart := index
@@ -430,7 +430,7 @@ func mainReturnWithCode() int {
 							core.WriteBytes(challengePacketData, &index, gatewayId[:], core.GatewayIdBytes)
 							encryptFinish := index
 							index += core.HMACBytes_Box
-							pittle := challengePacketData[index:index+core.PittleBytes]
+							pittle := challengePacketData[index : index+core.PittleBytes]
 							index += core.PittleBytes
 
 							challengePacketBytes := index
@@ -468,11 +468,11 @@ func mainReturnWithCode() int {
 							if _, err := conn.WriteToUDP(challengePacketData, from); err != nil {
 								core.Error("failed to send challenge packet to client: %v", err)
 							}
-							
+
 							core.Debug("send %d byte challenge packet to %s", len(challengePacketData), from.String())
 
 						}
-						
+
 						continue
 					}
 
@@ -629,8 +629,8 @@ func mainReturnWithCode() int {
 
 					core.Debug("payload bytes is %d", payloadBytes)
 
-					header := packetData[headerIndex:headerIndex+core.HeaderBytes]
-					payload := packetData[payloadIndex:payloadIndex+payloadBytes]
+					header := packetData[headerIndex : headerIndex+core.HeaderBytes]
+					payload := packetData[payloadIndex : payloadIndex+payloadBytes]
 
 					// build the packet to send to the client
 
@@ -644,13 +644,13 @@ func mainReturnWithCode() int {
 
 					core.WriteUint8(forwardPacketData, &index, version)
 					core.WriteUint8(forwardPacketData, &index, core.PayloadPacket)
-					chonkle := forwardPacketData[index:index+core.ChonkleBytes]
+					chonkle := forwardPacketData[index : index+core.ChonkleBytes]
 					index += core.ChonkleBytes
 					core.WriteBytes(forwardPacketData, &index, header, core.HeaderBytes)
 					core.WriteBytes(forwardPacketData, &index, payload, payloadBytes)
 					encryptFinish := index
 					index += core.HMACBytes_Box
-					pittle := forwardPacketData[index:index+core.PittleBytes]
+					pittle := forwardPacketData[index : index+core.PittleBytes]
 					index += core.PittleBytes
 
 					forwardPacketBytes := index
@@ -660,7 +660,7 @@ func mainReturnWithCode() int {
 
 					sessionId := header[:core.SessionIdBytes]
 
-					sequenceData := header[core.SessionIdBytes:core.SessionIdBytes+core.SequenceBytes]
+					sequenceData := header[core.SessionIdBytes : core.SessionIdBytes+core.SequenceBytes]
 
 					index = 0
 					sequence := uint64(0)
@@ -670,8 +670,8 @@ func mainReturnWithCode() int {
 					for i := 0; i < core.SequenceBytes; i++ {
 						nonce[i] = sequenceData[i]
 					}
-					nonce[9] |= (1<<0)
-					nonce[9] &= 1^(1<<1)
+					nonce[9] |= (1 << 0)
+					nonce[9] &= 1 ^ (1 << 1)
 
 					core.Encrypt_Box(gatewayPrivateKey, sessionId, nonce, forwardPacketData[encryptStart:encryptFinish], encryptFinish-encryptStart)
 

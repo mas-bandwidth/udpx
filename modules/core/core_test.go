@@ -298,7 +298,7 @@ func TestChallengeToken(t *testing.T) {
 	index := 0
 
 	WriteChallengeToken(buffer, &index, &challengeToken)
-	
+
 	assert.Equal(t, index, ChallengeTokenBytes)
 
 	var readChallengeToken ChallengeToken
@@ -380,7 +380,7 @@ func TestSessionToken(t *testing.T) {
 	index := 0
 
 	WriteSessionToken(buffer, &index, &sessionToken)
-	
+
 	assert.Equal(t, index, SessionTokenBytes)
 
 	var readSessionToken SessionToken
@@ -443,7 +443,7 @@ func TestConnectData(t *testing.T) {
 	index := 0
 
 	WriteConnectData(buffer, &index, &connectData)
-	
+
 	assert.Equal(t, index, ConnectDataBytes)
 
 	var readConnectData ConnectData
@@ -464,4 +464,3 @@ func TestConnectData(t *testing.T) {
 
 	assert.False(t, result)
 }
-

@@ -31,6 +31,12 @@ build-server: dist
 	@$(GO) build -o ${DIST_DIR}/server ./cmd/server/server.go
 	@printf "done\n"
 
+.PHONY: build-connect-token
+build-connect-token: dist
+	@printf "Building connect token... "
+	@$(GO) build -o ${DIST_DIR}/connect_token ./cmd/connect_token/connect_token.go
+	@printf "done\n"
+
 .PHONY: build-keygen
 build-keygen: dist
 	@printf "Building kegen... "
@@ -49,11 +55,15 @@ dev-client: build-client ## runs a local client
 
 .PHONY: dev-gateway
 dev-gateway: build-gateway ## runs a local gateway
-	HTTP_PORT=40000 UDP_PORT=40000 GATEWAY_ADDRESS=127.0.0.1:40000 GATEWAY_INTERNAL_ADDRESS=127.0.0.1:40001 GATEWAY_PRIVATE_KEY=qmnxBZs2UElVT4SXCdDuX4td+qtPkuXLL5VdOE0vvcA= SERVER_ADDRESS=127.0.0.1:50000 ./dist/gateway
+	HTTP_PORT=40000 UDP_PORT=40000 GATEWAY_ADDRESS=127.0.0.1:40000 GATEWAY_INTERNAL_ADDRESS=127.0.0.1:40001 GATEWAY_PRIVATE_KEY=qmnxBZs2UElVT4SXCdDuX4td+qtPkuXLL5VdOE0vvcA= SESSION_PRIVATE_KEY=uKCWrFe/MR2Vqq1MbX/mGhB2dnXUs319uXjTqCIwmHM= SERVER_ADDRESS=127.0.0.1:50000 ./dist/gateway
 
 .PHONY: dev-server
 dev-server: build-server ## runs a local server
 	HTTP_PORT=50000 UDP_PORT=50000 ./dist/server
+
+.PHONY: connect-token
+connect-token: build-connect-token ## generate connect token
+	GATEWAY_ADDRESS=127.0.0.1:40000 GATEWAY_PUBLIC_KEY=vnIjsJWZzgq+nS9t3KU7ch5BFhgDkm2U2bm7/2W6eRs= SESSION_PRIVATE_KEY=eeGgZHccnBNQZpHWqF4AB+UFvQL//MbIJ/o7wK/oXZc= ./dist/connect_token
 
 .PHONY: keygen
 keygen: build-keygen ## generate keypair
@@ -72,7 +82,7 @@ format:
 	@$(GOFMT) -s -w .
 
 .PHONY: build-all
-build-all: build-client build-gateway build-server ## builds everything
+build-all: build-client build-gateway build-server keygen connect-token soak ## builds everything
 
 .PHONY: rebuild-all
 rebuild-all: clean build-all ## rebuilds everything

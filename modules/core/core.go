@@ -40,12 +40,12 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
-	"time"
 	"hash/fnv"
 	"math"
 	"net"
 	"os"
 	"strconv"
+	"time"
 )
 
 const MagicBytes = 8
@@ -81,7 +81,7 @@ const PostfixBytes = HMACBytes_Box + PittleBytes
 const MinPayloadBytes = 1000
 const MinPacketSize = PrefixBytes + HeaderBytes + MinPayloadBytes + PostfixBytes
 
-const Flags_ChallengeToken = (1<<0)
+const Flags_ChallengeToken = (1 << 0)
 
 func Keygen_Box() ([]byte, []byte) {
 	var publicKey [PublicKeyBytes_Box]byte
@@ -620,7 +620,7 @@ func WriteChallengeToken(buffer []byte, index *int, token *ChallengeToken) {
 }
 
 func ReadChallengeToken(buffer []byte, index *int, token *ChallengeToken) bool {
-	if len(buffer) - *index < ChallengeTokenBytes {
+	if len(buffer)-*index < ChallengeTokenBytes {
 		return false
 	}
 	ReadUint64(buffer, index, &token.ExpireTimestamp)
@@ -630,23 +630,23 @@ func ReadChallengeToken(buffer []byte, index *int, token *ChallengeToken) bool {
 }
 
 func WriteEncryptedChallengeToken(buffer []byte, index *int, token *ChallengeToken, privateKey []byte) {
-	nonce := buffer[*index:*index+NonceBytes_SecretBox]
+	nonce := buffer[*index : *index+NonceBytes_SecretBox]
 	RandomBytes_InPlace(nonce)
 	*index += NonceBytes_SecretBox
-	tokenData := buffer[*index:*index+ChallengeTokenBytes+HMACBytes_SecretBox]
+	tokenData := buffer[*index : *index+ChallengeTokenBytes+HMACBytes_SecretBox]
 	WriteChallengeToken(buffer, index, token)
 	Encrypt_SecretBox(privateKey, nonce, tokenData, ChallengeTokenBytes)
 	*index += HMACBytes_SecretBox
 }
 
 func ReadEncryptedChallengeToken(buffer []byte, index *int, token *ChallengeToken, privateKey []byte) bool {
-	if len(buffer) - *index < EncryptedChallengeTokenBytes {
+	if len(buffer)-*index < EncryptedChallengeTokenBytes {
 		return false
 	}
-	nonce := buffer[*index:*index+NonceBytes_SecretBox]
+	nonce := buffer[*index : *index+NonceBytes_SecretBox]
 	*index += NonceBytes_SecretBox
-	tokenData := buffer[*index:*index+ChallengeTokenBytes+HMACBytes_SecretBox]
-	err := Decrypt_SecretBox(privateKey, nonce, tokenData, ChallengeTokenBytes+HMACBytes_SecretBox)	
+	tokenData := buffer[*index : *index+ChallengeTokenBytes+HMACBytes_SecretBox]
+	err := Decrypt_SecretBox(privateKey, nonce, tokenData, ChallengeTokenBytes+HMACBytes_SecretBox)
 	if err != nil {
 		return false
 	}
@@ -656,7 +656,7 @@ func ReadEncryptedChallengeToken(buffer []byte, index *int, token *ChallengeToke
 }
 
 func GetAckBits(latestReceivedSequence uint64, receivedPackets []uint64, ack_bits []byte) {
-	totalBits := uint64(len(ack_bits)*8)
+	totalBits := uint64(len(ack_bits) * 8)
 	ack := make([]byte, totalBits)
 	bufferSize := uint64(len(receivedPackets))
 	i := 0
@@ -671,18 +671,18 @@ func GetAckBits(latestReceivedSequence uint64, receivedPackets []uint64, ack_bit
 		if ack[i] == 1 {
 			byteIndex := i / 8
 			bitIndex := i % 8
-			ack_bits[byteIndex] |= (1<<bitIndex)
+			ack_bits[byteIndex] |= (1 << bitIndex)
 		}
 	}
 }
 
 func ProcessAcks(ackSequence uint64, ack_bits []byte, ackedPackets []uint64, ackBuffer []uint64) []uint64 {
-	totalBits := uint64(len(ack_bits)*8)
+	totalBits := uint64(len(ack_bits) * 8)
 	ack := make([]byte, totalBits)
 	for i := uint64(0); i < totalBits; i++ {
 		byteIndex := i / 8
 		bitIndex := i % 8
-		if ( ack_bits[byteIndex] & (1<<bitIndex) ) != 0 {
+		if (ack_bits[byteIndex] & (1 << bitIndex)) != 0 {
 			ack[i] = 1
 		}
 	}
@@ -700,8 +700,8 @@ func ProcessAcks(ackSequence uint64, ack_bits []byte, ackedPackets []uint64, ack
 
 type SessionToken struct {
 	ExpireTimestamp uint64
-	SessionId [SessionIdBytes]byte
-	UserId [UserIdBytes]byte
+	SessionId       [SessionIdBytes]byte
+	UserId          [UserIdBytes]byte
 }
 
 const SessionTokenBytes = 8 + SessionIdBytes + UserIdBytes
@@ -714,7 +714,7 @@ func WriteSessionToken(buffer []byte, index *int, token *SessionToken) {
 }
 
 func ReadSessionToken(buffer []byte, index *int, token *SessionToken) bool {
-	if len(buffer) - *index < SessionTokenBytes {
+	if len(buffer)-*index < SessionTokenBytes {
 		return false
 	}
 	ReadUint64(buffer, index, &token.ExpireTimestamp)
@@ -724,22 +724,22 @@ func ReadSessionToken(buffer []byte, index *int, token *SessionToken) bool {
 }
 
 func WriteEncryptedSessionToken(buffer []byte, index *int, token *SessionToken, senderPrivateKey []byte, receiverPublicKey []byte) {
-	nonce := buffer[*index:*index+NonceBytes_Box]
+	nonce := buffer[*index : *index+NonceBytes_Box]
 	RandomBytes_InPlace(nonce)
 	*index += NonceBytes_Box
-	tokenData := buffer[*index:*index+SessionTokenBytes+HMACBytes_Box]
+	tokenData := buffer[*index : *index+SessionTokenBytes+HMACBytes_Box]
 	WriteSessionToken(buffer, index, token)
 	Encrypt_Box(senderPrivateKey, receiverPublicKey, nonce, tokenData, SessionTokenBytes)
 	*index += HMACBytes_Box
 }
 
 func ReadEncryptedSessionToken(buffer []byte, index *int, token *SessionToken, senderPublicKey []byte, receiverPrivateKey []byte) bool {
-	if len(buffer) - *index < EncryptedSessionTokenBytes {
+	if len(buffer)-*index < EncryptedSessionTokenBytes {
 		return false
 	}
-	nonce := buffer[*index:*index+NonceBytes_Box]
+	nonce := buffer[*index : *index+NonceBytes_Box]
 	*index += NonceBytes_Box
-	tokenData := buffer[*index:*index+SessionTokenBytes+HMACBytes_Box]
+	tokenData := buffer[*index : *index+SessionTokenBytes+HMACBytes_Box]
 	err := Decrypt_Box(senderPublicKey, receiverPrivateKey, nonce, tokenData, SessionTokenBytes+HMACBytes_Box)
 	if err != nil {
 		return false
@@ -750,8 +750,8 @@ func ReadEncryptedSessionToken(buffer []byte, index *int, token *SessionToken, s
 }
 
 type ConnectData struct {
-	SessionId [SessionIdBytes]byte
-	GatewayAddress net.UDPAddr
+	SessionId        [SessionIdBytes]byte
+	GatewayAddress   net.UDPAddr
 	GatewayPublicKey [PublicKeyBytes_Box]byte
 }
 
@@ -772,7 +772,7 @@ func WriteConnectData(buffer []byte, index *int, connectData *ConnectData) {
 }
 
 func ReadConnectData(buffer []byte, index *int, connectData *ConnectData) bool {
-	if len(buffer) - *index < ConnectDataBytes {
+	if len(buffer)-*index < ConnectDataBytes {
 		return false
 	}
 	ReadBytes(buffer, index, connectData.SessionId[:], SessionIdBytes)
@@ -781,7 +781,7 @@ func ReadConnectData(buffer []byte, index *int, connectData *ConnectData) bool {
 	return true
 }
 
-func GenerateConnectToken(userId [UserIdBytes]byte, gatewayAddress *net.UDPAddr, gatewayPublicKey []byte, senderPrivateKey []byte, receiverPublicKey []byte) []byte {
+func GenerateConnectToken(userId []byte, gatewayAddress *net.UDPAddr, gatewayPublicKey []byte, senderPrivateKey []byte, receiverPublicKey []byte) []byte {
 
 	connectData := ConnectData{}
 	RandomBytes_InPlace(connectData.SessionId[:])
@@ -793,7 +793,7 @@ func GenerateConnectToken(userId [UserIdBytes]byte, gatewayAddress *net.UDPAddr,
 	copy(sessionToken.SessionId[:], connectData.SessionId[:])
 	copy(sessionToken.UserId[:], userId[:])
 
-	buffer := make([]byte, ConnectDataBytes + EncryptedSessionTokenBytes)
+	buffer := make([]byte, ConnectDataBytes+EncryptedSessionTokenBytes)
 
 	index := 0
 

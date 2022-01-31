@@ -38,7 +38,7 @@ import (
 )
 
 const (
-	clientBin   = "./dist/client"
+	clientBin  = "./dist/client"
 	gatewayBin = "./dist/gateway"
 	serverBin  = "./dist/server"
 )
@@ -122,7 +122,7 @@ func soak() {
 
 	for i := 0; i < NumClients; i++ {
 		client_cmd[i].Process.Signal(os.Interrupt)
-		client_cmd[i].Wait()		
+		client_cmd[i].Wait()
 	}
 }
 

@@ -34,12 +34,12 @@ package main
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"net"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
-	"math/rand"
 
 	"github.com/networknext/udpx/modules/core"
 	"github.com/networknext/udpx/modules/envvar"
@@ -122,7 +122,7 @@ func mainReturnWithCode() int {
 
 	sendSequence := uint64(10000) + uint64(rand.Intn(10000))
 	receiveSequence := uint64(0)
-	
+
 	packetReceiveQueue := make(chan []byte, QueueSize)
 
 	ackBuffer := make([]uint64, SequenceBufferSize)
@@ -138,7 +138,7 @@ func mainReturnWithCode() int {
 		sequenceToPayloadId[i] = ^uint64(0)
 	}
 
-    // create client socket
+	// create client socket
 
 	lc := net.ListenConfig{}
 
@@ -171,7 +171,7 @@ func mainReturnWithCode() int {
 			for {
 				select {
 				case payload := <-payloadSendQueue:
-		
+
 					ack_bits := [core.AckBitsBytes]byte{}
 
 					core.GetAckBits(receiveSequence, receivedPackets[:], ack_bits[:])
@@ -184,7 +184,7 @@ func mainReturnWithCode() int {
 
 					core.Debug("send packet sequence = %d", sendSequence)
 					core.Debug("send packet ack = %d", receiveSequence)
-					core.Debug("send packet ack_bits = [%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x]", 
+					core.Debug("send packet ack_bits = [%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x]",
 						ack_bits[0],
 						ack_bits[1],
 						ack_bits[2],
@@ -233,7 +233,7 @@ func mainReturnWithCode() int {
 					if hasChallengeToken {
 						core.WriteBytes(packetData, &index, challengeTokenGatewayId[:], core.GatewayIdBytes)
 					} else {
-						core.WriteBytes(packetData, &index, gatewayId[:], core.GatewayIdBytes)						
+						core.WriteBytes(packetData, &index, gatewayId[:], core.GatewayIdBytes)
 					}
 					core.WriteBytes(packetData, &index, serverId[:], core.ServerIdBytes)
 					core.WriteUint8(packetData, &index, core.PayloadPacket)
@@ -389,7 +389,7 @@ func mainReturnWithCode() int {
 
 						sessionIdIndex := core.PrefixBytes
 
-						sessionId := packetData[sessionIdIndex : sessionIdIndex + core.SessionIdBytes]
+						sessionId := packetData[sessionIdIndex : sessionIdIndex+core.SessionIdBytes]
 
 						if !core.IdEqual(sessionId, clientPublicKey) {
 							core.Debug("session id mismatch")
@@ -402,14 +402,14 @@ func mainReturnWithCode() int {
 						encryptedDataIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes + core.SessionIdBytes + core.SequenceBytes
 
 						sequenceData := packetData[sequenceIndex : sequenceIndex+core.SequenceBytes]
-						encryptedData := packetData[encryptedDataIndex : packetBytes - core.PittleBytes]
+						encryptedData := packetData[encryptedDataIndex : packetBytes-core.PittleBytes]
 
 						nonce := make([]byte, core.NonceBytes_Box)
 						for i := 0; i < core.SequenceBytes; i++ {
 							nonce[i] = sequenceData[i]
 						}
-						nonce[9] |= (1<<0)
-						nonce[9] &= 1^(1<<1)
+						nonce[9] |= (1 << 0)
+						nonce[9] &= 1 ^ (1 << 1)
 
 						err = core.Decrypt_Box(gatewayPublicKey, clientPrivateKey, nonce, encryptedData, len(encryptedData))
 						if err != nil {
@@ -420,13 +420,13 @@ func mainReturnWithCode() int {
 						// split decrypted packet into various pieces
 
 						headerIndex := core.PrefixBytes
-						
+
 						payloadIndex := headerIndex + core.HeaderBytes
 						payloadBytes := packetBytes - payloadIndex - core.PostfixBytes
 
-						header := packetData[headerIndex:headerIndex+core.HeaderBytes]
+						header := packetData[headerIndex : headerIndex+core.HeaderBytes]
 
-						payload := packetData[payloadIndex:payloadIndex+payloadBytes]
+						payload := packetData[payloadIndex : payloadIndex+payloadBytes]
 
 						// check encrypted packet type matches
 
@@ -442,7 +442,7 @@ func mainReturnWithCode() int {
 						sequence := uint64(0)
 						core.ReadUint64(sequenceData, &index, &sequence)
 
-						if receiveSequence > OldSequenceThreshold && sequence < receiveSequence - OldSequenceThreshold {
+						if receiveSequence > OldSequenceThreshold && sequence < receiveSequence-OldSequenceThreshold {
 							core.Debug("packet sequence is too old: %d", sequence)
 							continue
 						}
@@ -472,7 +472,7 @@ func mainReturnWithCode() int {
 
 						core.Debug("recv packet sequence = %d", packet_sequence)
 						core.Debug("recv packet ack = %d", packet_ack)
-						core.Debug("recv packet ack_bits = [%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x]", 
+						core.Debug("recv packet ack_bits = [%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x]",
 							packet_ack_bits[0],
 							packet_ack_bits[1],
 							packet_ack_bits[2],
@@ -508,7 +508,7 @@ func mainReturnWithCode() int {
 
 						// process acks
 
-						acks := core.ProcessAcks(packet_ack, packet_ack_bits[:], ackedPackets[:], ackBuffer[:])						
+						acks := core.ProcessAcks(packet_ack, packet_ack_bits[:], ackedPackets[:], ackBuffer[:])
 
 						for i := range acks {
 							core.Debug("ack packet %d", acks[i])
@@ -523,7 +523,7 @@ func mainReturnWithCode() int {
 
 						gatewayIdIndex := sessionIdIndex + core.SessionIdBytes + core.SequenceBytes + core.AckBytes + core.AckBitsBytes
 
-						packetGatewayId := packetData[gatewayIdIndex : gatewayIdIndex + core.GatewayIdBytes]
+						packetGatewayId := packetData[gatewayIdIndex : gatewayIdIndex+core.GatewayIdBytes]
 
 						if !core.IdEqual(packetGatewayId, gatewayId[:]) {
 							core.Info("connected to gateway %s", core.IdString(packetGatewayId))
@@ -534,7 +534,7 @@ func mainReturnWithCode() int {
 
 						serverIdIndex := gatewayIdIndex + core.GatewayIdBytes
 
-						packetServerId := packetData[serverIdIndex : serverIdIndex + core.ServerIdBytes]
+						packetServerId := packetData[serverIdIndex : serverIdIndex+core.ServerIdBytes]
 
 						if !core.IdEqual(packetServerId, serverId[:]) {
 							core.Info("connected to server %s", core.IdString(packetServerId))
@@ -550,9 +550,9 @@ func mainReturnWithCode() int {
 						}
 
 					case core.ChallengePacket:
-						
+
 						core.Debug("received %d byte challenge packet from gateway", len(packetData))
-						
+
 						if len(packetData) != 174 {
 							core.Debug("bad challenge packet size: %d", len(packetData))
 							continue
@@ -562,22 +562,22 @@ func mainReturnWithCode() int {
 
 						encryptedDataIndex := nonceIndex + core.NonceBytes_Box
 
-						encryptedData := packetData[encryptedDataIndex:len(packetData)]
+						encryptedData := packetData[encryptedDataIndex:]
 
 						nonce := packetData[nonceIndex:core.NonceBytes_Box]
 
-						err = core.Decrypt_Box(gatewayPublicKey, clientPrivateKey, nonce, encryptedData, len(encryptedData) - core.PittleBytes)
+						err = core.Decrypt_Box(gatewayPublicKey, clientPrivateKey, nonce, encryptedData, len(encryptedData)-core.PittleBytes)
 						if err != nil {
 							core.Debug("could not decrypt challenge packet")
 							continue
 						}
 
-						packetChallengeTokenData := packetData[encryptedDataIndex:encryptedDataIndex+core.EncryptedChallengeTokenBytes]
+						packetChallengeTokenData := packetData[encryptedDataIndex : encryptedDataIndex+core.EncryptedChallengeTokenBytes]
 
 						packetChallengeSequence := uint64(0)
 						index := encryptedDataIndex + core.EncryptedChallengeTokenBytes
 						core.ReadUint64(packetData, &index, &packetChallengeSequence)
-						
+
 						var packetGatewayId [core.GatewayIdBytes]byte
 						core.ReadBytes(packetData, &index, packetGatewayId[:], core.GatewayIdBytes)
 
@@ -646,7 +646,7 @@ func mainReturnWithCode() int {
 			// sleep till next frame
 
 			time.Sleep(10 * time.Millisecond)
-		}		
+		}
 
 	}()
 

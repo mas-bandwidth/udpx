@@ -56,11 +56,11 @@ const SequenceBufferSize = 1024
 const QueueSize = 1024
 
 type SessionEntry struct {
-	SendSequence uint64
-	ReceiveSequence uint64
-	AckedPackets [SequenceBufferSize]uint64
-	ReceivedPackets [SequenceBufferSize]uint64
-	SendPayloadId uint64
+	SendSequence        uint64
+	ReceiveSequence     uint64
+	AckedPackets        [SequenceBufferSize]uint64
+	ReceivedPackets     [SequenceBufferSize]uint64
+	SendPayloadId       uint64
 	SequenceToPayloadId [SequenceBufferSize]uint64
 }
 
@@ -104,7 +104,7 @@ func mainReturnWithCode() int {
 
 	core.Info("starting server on port %s", udpPort)
 
-	core.Info("server id is %s", core.IdString(serverId))	
+	core.Info("server id is %s", core.IdString(serverId))
 
 	// --------------------------------------------------------------------
 
@@ -260,7 +260,7 @@ func mainReturnWithCode() int {
 
 				core.Debug("recv packet sequence = %d", sequence)
 				core.Debug("recv packet ack = %d", ack)
-				core.Debug("recv packet ack_bits = [%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x]", 
+				core.Debug("recv packet ack_bits = [%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x]",
 					ack_bits[0],
 					ack_bits[1],
 					ack_bits[2],
@@ -301,7 +301,7 @@ func mainReturnWithCode() int {
 					sessionEntry = sessionMap_Old[sessionId]
 					if sessionEntry == nil {
 						// add new session entry
-						sessionEntry = &SessionEntry{SendSequence: ack+10000, ReceiveSequence: sequence}
+						sessionEntry = &SessionEntry{SendSequence: ack + 10000, ReceiveSequence: sequence}
 						for i := range sessionEntry.SequenceToPayloadId {
 							sessionEntry.SequenceToPayloadId[i] = ^uint64(0)
 						}
@@ -346,12 +346,12 @@ func mainReturnWithCode() int {
 
 				var ackBuffer [SequenceBufferSize]uint64
 
-				acks := core.ProcessAcks(ack, ack_bits[:], sessionEntry.AckedPackets[:], ackBuffer[:])						
+				acks := core.ProcessAcks(ack, ack_bits[:], sessionEntry.AckedPackets[:], ackBuffer[:])
 
 				for i := range acks {
 					core.Debug("ack packet %d\n", acks[i])
 					sessionEntry.AckedPackets[acks[i]%SequenceBufferSize] = acks[i]
-					payloadAck := sessionEntry.SequenceToPayloadId[acks[i]%SequenceBufferSize]  
+					payloadAck := sessionEntry.SequenceToPayloadId[acks[i]%SequenceBufferSize]
 					if payloadAck != ^uint64(0) {
 						core.Debug("ack payload %d for session %s", payloadAck, core.IdString(sessionId[:]))
 					}
@@ -377,7 +377,7 @@ func mainReturnWithCode() int {
 
 				core.Debug("send packet sequence = %d", send_sequence)
 				core.Debug("send packet ack = %d", send_ack)
-				core.Debug("send packet ack_bits = [%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x]", 
+				core.Debug("send packet ack_bits = [%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x]",
 					send_ack_bits[0],
 					send_ack_bits[1],
 					send_ack_bits[2],
