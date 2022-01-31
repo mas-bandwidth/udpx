@@ -166,11 +166,14 @@ func sessionTokenHandler(w http.ResponseWriter, r *http.Request) {
 	
 	requestData, err := ioutil.ReadAll(r.Body)
 	if err != nil {
+		// todo: core debug
+		fmt.Printf("could not read request data: %v\n", err) 
 	    http.Error(w, err.Error(), http.StatusBadRequest)
 	    return
 	}
 
 	if len(requestData) != core.EncryptedSessionTokenBytes {
+		// todo: core debug
 		fmt.Printf("bad request length (%d)\n", len(requestData))
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -180,12 +183,14 @@ func sessionTokenHandler(w http.ResponseWriter, r *http.Request) {
 	var sessionToken core.SessionToken
 	result := core.ReadEncryptedSessionToken(requestData, &index, &sessionToken, AuthPublicKey[:], GatewayPrivateKey[:])
 	if !result {
+		// todo: core debug
 		fmt.Printf("invalid session token\n")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	if sessionToken.ExpireTimestamp < uint64(time.Now().Unix()) {
+		// todo: core debug
 		fmt.Printf("session token has expired\n")
 		w.WriteHeader(http.StatusBadRequest)
 		return		

@@ -70,21 +70,13 @@ DONE
 
 	Leave user id as zero for now.
 
-TODO
-
-	---------------
-
 	Implement an endpoint on auth to extend a session token. 
 
 	Input is the current session token, uploaded as binary application/octet-stream on a POST
 
 	Output is the current session token, returned as binary application/octet-stream
 
-	---------------
-
-	The gateway talks to auth to extend the session token +10 seconds.
-
-	The clients don't talk directly to this system. It's a private system the backend uses.
+TODO
 
 	---------------
 
