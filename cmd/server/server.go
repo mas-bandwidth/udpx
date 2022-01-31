@@ -349,7 +349,7 @@ func mainReturnWithCode() int {
 				acks := core.ProcessAcks(ack, ack_bits[:], sessionEntry.AckedPackets[:], ackBuffer[:])
 
 				for i := range acks {
-					core.Debug("ack packet %d\n", acks[i])
+					core.Debug("ack packet %d", acks[i])
 					sessionEntry.AckedPackets[acks[i]%SequenceBufferSize] = acks[i]
 					payloadAck := sessionEntry.SequenceToPayloadId[acks[i]%SequenceBufferSize]
 					if payloadAck != ^uint64(0) {

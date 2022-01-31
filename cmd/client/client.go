@@ -227,7 +227,7 @@ func mainReturnWithCode() int {
 					core.WriteUint8(packetData, &index, core.PayloadPacket)
 					chonkle := packetData[index : index+core.ChonkleBytes]
 					index += core.ChonkleBytes
-					core.WriteBytes(packetData, &index, sessionToken, core.EncryptedChallengeTokenBytes)
+					core.WriteBytes(packetData, &index, sessionToken, core.EncryptedSessionTokenBytes)
 					core.WriteBytes(packetData, &index, sessionId, core.SessionIdBytes)
 					sequenceData := packetData[index : index+core.SequenceBytes]
 					core.WriteUint64(packetData, &index, sendSequence)
@@ -402,8 +402,8 @@ func mainReturnWithCode() int {
 
 						// decrypt packet
 
-						sequenceIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes + core.EncryptedChallengeTokenBytes + core.SessionIdBytes
-						encryptedDataIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes + core.EncryptedChallengeTokenBytes + core.SessionIdBytes + core.SequenceBytes
+						sequenceIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes + core.EncryptedSessionTokenBytes + core.SessionIdBytes
+						encryptedDataIndex := sequenceIndex + core.SequenceBytes
 
 						sequenceData := packetData[sequenceIndex : sequenceIndex+core.SequenceBytes]
 						encryptedData := packetData[encryptedDataIndex : packetBytes-core.PittleBytes]
@@ -557,18 +557,18 @@ func mainReturnWithCode() int {
 
 						core.Debug("received %d byte challenge packet from gateway", len(packetData))
 
-						if len(packetData) != 174 {
-							core.Debug("bad challenge packet size: %d", len(packetData))
+						if len(packetData) != core.ChallengePacketBytes {
+							core.Debug("bad challenge packet size: got %d, expected %d", len(packetData), core.ChallengePacketBytes)
 							continue
 						}
 
-						nonceIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes
+						nonceIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes + core.EncryptedSessionTokenBytes
 
 						encryptedDataIndex := nonceIndex + core.NonceBytes_Box
 
 						encryptedData := packetData[encryptedDataIndex:]
 
-						nonce := packetData[nonceIndex:core.NonceBytes_Box]
+						nonce := packetData[nonceIndex:nonceIndex+core.NonceBytes_Box]
 
 						err = core.Decrypt_Box(gatewayPublicKey, clientPrivateKey, nonce, encryptedData, len(encryptedData)-core.PittleBytes)
 						if err != nil {

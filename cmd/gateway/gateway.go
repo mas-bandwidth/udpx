@@ -282,7 +282,7 @@ func mainReturnWithCode() int {
 
 					sessionIdIndex := core.PrefixBytes
 					sequenceIndex := sessionIdIndex + core.SessionIdBytes
-					encryptedDataIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes + core.SessionIdBytes + core.SequenceBytes
+					encryptedDataIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes + core.EncryptedSessionTokenBytes + core.SessionIdBytes + core.SequenceBytes
 
 					senderPublicKey := packetData[sessionIdIndex : sessionIdIndex+core.SessionIdBytes]
 					sequenceData := packetData[sequenceIndex : sequenceIndex+core.SequenceBytes]
@@ -418,11 +418,14 @@ func mainReturnWithCode() int {
 
 							index := 0
 
+							dummySessionToken := [core.EncryptedSessionTokenBytes]byte{}
+
 							version := byte(0)
 							core.WriteUint8(challengePacketData, &index, version)
 							core.WriteUint8(challengePacketData, &index, core.ChallengePacket)
 							chonkle := challengePacketData[index : index+core.ChonkleBytes]
 							index += core.ChonkleBytes
+							core.WriteBytes(challengePacketData, &index, dummySessionToken[:], core.EncryptedSessionTokenBytes)
 							core.WriteBytes(challengePacketData, &index, nonce[:], core.NonceBytes_Box)
 							encryptStart := index
 							core.WriteEncryptedChallengeToken(challengePacketData, &index, &challengeToken, challengePrivateKey)
@@ -640,12 +643,14 @@ func mainReturnWithCode() int {
 
 					version := byte(0)
 
-					encryptStart := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes + core.SessionIdBytes + core.SequenceBytes
+					encryptStart := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes + core.EncryptedSessionTokenBytes + core.SessionIdBytes + core.SequenceBytes
 
 					core.WriteUint8(forwardPacketData, &index, version)
 					core.WriteUint8(forwardPacketData, &index, core.PayloadPacket)
 					chonkle := forwardPacketData[index : index+core.ChonkleBytes]
 					index += core.ChonkleBytes
+					// todo: session token
+					index += core.EncryptedSessionTokenBytes
 					core.WriteBytes(forwardPacketData, &index, header, core.HeaderBytes)
 					core.WriteBytes(forwardPacketData, &index, payload, payloadBytes)
 					encryptFinish := index

@@ -32,21 +32,26 @@ DONE
 
 	Confirmed.
 
-TODO
-
-	---------------
-
 	Extend core.go packet definition to include the session token in the prefix, after the chonkle.
 
 	Update client to include the session token in packets sent.
 
 	Update client to read the session token in packets received.
 
-	---------------
-
 	Update gateway to have session token in the payload packet on read and write.
 
 	Server does not need to see or know about the session token for now, keep it at the gateway level (like the chonkle).
+
+TODO
+
+	---------------
+
+	Get the client and gateway working with the new packet structure first.
+
+	Right now, stuck on client not being able to decrypt payload packet. Something wrong there.
+
+	---------------
+
 
 	Gateway decrypts the session token
 
