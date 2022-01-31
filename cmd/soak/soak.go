@@ -45,6 +45,8 @@ const (
 
 func client(port uint16) *exec.Cmd {
 
+	// todo: we need to get a connect token for ecah client so they can connect
+
 	cmd := exec.Command(clientBin)
 	if cmd == nil {
 		panic("could not create client!\n")

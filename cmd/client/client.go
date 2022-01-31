@@ -227,6 +227,7 @@ func mainReturnWithCode() int {
 					core.WriteUint8(packetData, &index, core.PayloadPacket)
 					chonkle := packetData[index : index+core.ChonkleBytes]
 					index += core.ChonkleBytes
+					core.WriteBytes(packetData, &index, sessionToken, core.EncryptedChallengeTokenBytes)
 					core.WriteBytes(packetData, &index, sessionId, core.SessionIdBytes)
 					sequenceData := packetData[index : index+core.SequenceBytes]
 					core.WriteUint64(packetData, &index, sendSequence)
@@ -401,8 +402,8 @@ func mainReturnWithCode() int {
 
 						// decrypt packet
 
-						sequenceIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes + core.SessionIdBytes
-						encryptedDataIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes + core.SessionIdBytes + core.SequenceBytes
+						sequenceIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes + core.EncryptedChallengeTokenBytes + core.SessionIdBytes
+						encryptedDataIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes + core.EncryptedChallengeTokenBytes + core.SessionIdBytes + core.SequenceBytes
 
 						sequenceData := packetData[sequenceIndex : sequenceIndex+core.SequenceBytes]
 						encryptedData := packetData[encryptedDataIndex : packetBytes-core.PittleBytes]
