@@ -64,27 +64,21 @@ DONE
 
 	Its job is to generate connect tokens when asked for a given user id, and to extend session tokens while a session is connected.
 
+	Auth service needs to know the auth private key and the gateway private and public keys.
+
+	Implement an endpoint on auth to create a connect token "/connect_token".
+
+	Leave user id as zero for now.
+
 TODO
-
-	---------------
-
-	Auth service needs to know the auth private key and the gateway public key.
-
-	---------------
-
-	Implement an endpoint on auth to create a connect token "/connect_token?user_id=1234021410"
-
-	Input should be the user id as a hex string.
-
-	Output should be the base64 of the connect token.
 
 	---------------
 
 	Implement an endpoint on auth to extend a session token. 
 
-	Input is the current session token (as base64?). 
+	Input is the current session token, uploaded as binary application/octet-stream on a POST
 
-	Output is the current session token (as base64?)
+	Output is the current session token, returned as binary application/octet-stream
 
 	---------------
 
