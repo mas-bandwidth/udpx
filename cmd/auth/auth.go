@@ -38,6 +38,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"net"
 
 	"github.com/networknext/udpx/modules/core"
 	"github.com/networknext/udpx/modules/envvar"
@@ -51,6 +52,11 @@ func main() {
 	os.Exit(mainReturnWithCode())
 }
 
+var GatewayAddress *net.UDPAddr
+var GatewayPublicKey [core.PublicKeyBytes_Box]byte
+var GatewayPrivateKey [core.PrivateKeyBytes_Box]byte
+var AuthPrivateKey [core.PrivateKeyBytes_Box]byte
+
 func mainReturnWithCode() int {
 
 	serviceName := "udpx auth"
@@ -59,13 +65,42 @@ func mainReturnWithCode() int {
 
 	// configure
 
-	// ...
+	gatewayAddress, err := envvar.GetAddress("GATEWAY_ADDRESS", core.ParseAddress("127.0.0.1:40000"))
+	if err != nil {
+		core.Error("invalid GATEWAY_ADDRESS: %v", err)
+		return 1
+	}
+
+	gatewayPublicKey, err := envvar.GetBase64("GATEWAY_PUBLIC_KEY", nil)
+	if err != nil || len(gatewayPublicKey) != core.PublicKeyBytes_Box {
+		core.Error("missing or invalid GATEWAY_PUBLIC_KEY: %v", err)
+		return 1
+	}
+
+	gatewayPrivateKey, err := envvar.GetBase64("GATEWAY_PRIVATE_KEY", nil)
+	if err != nil || len(gatewayPrivateKey) != core.PrivateKeyBytes_Box {
+		core.Error("missing or invalid GATEWAY_PRIVATE_KEY: %v", err)
+		return 1
+	}
+
+	authPrivateKey, err := envvar.GetBase64("AUTH_PRIVATE_KEY", nil)
+	if err != nil || len(authPrivateKey) != core.PrivateKeyBytes_Box {
+		core.Error("missing or invalid AUTH_PRIVATE_KEY: %v", err)
+		return 1
+	}
+
+	GatewayAddress = gatewayAddress
+	copy(GatewayPublicKey[:], gatewayPublicKey[:])
+	copy(GatewayPrivateKey[:], gatewayPrivateKey[:])
+	copy(AuthPrivateKey[:], authPrivateKey[:])
 
 	// start web server
 	{
 		router := mux.NewRouter()
 		router.HandleFunc("/health", healthHandler).Methods("GET")
 		router.HandleFunc("/status", statusHandler).Methods("GET")
+		router.HandleFunc("/connect_token", connectTokenHandler).Methods("GET")
+		router.HandleFunc("/session_token", sessionTokenHandler).Methods("GET")
 
 		httpPort := envvar.Get("HTTP_PORT", "60000")
 
@@ -108,4 +143,24 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 
 func statusHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "hello world\n")
+}
+
+func connectTokenHandler(w http.ResponseWriter, r *http.Request) {
+	var userId [core.UserIdBytes]byte // todo: read in the user id from octet-stream from POST?
+	connectToken := core.GenerateConnectToken(userId[:], GatewayAddress, GatewayPublicKey[:], AuthPrivateKey[:], GatewayPublicKey[:])
+	w.Header().Set("Content-Type", "application/octet-stream") 
+	w.WriteHeader(http.StatusOK)
+	w.Write(connectToken)
+}
+
+func sessionTokenHandler(w http.ResponseWriter, r *http.Request) {
+	
+	// todo: read in the current session token from octet-stream from POST
+	// https://stackoverflow.com/questions/37462349/sending-octet-stream
+
+	sessionToken := make([]byte, 256)
+
+	w.Header().Set("Content-Type", "application/octet-stream") 
+	w.WriteHeader(http.StatusOK)
+	w.Write(sessionToken)
 }
