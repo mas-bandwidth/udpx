@@ -360,3 +360,74 @@ func TestProcessAcks(t *testing.T) {
 	// todo
 
 }
+
+func TestSessionToken(t *testing.T) {
+
+	t.Parallel()
+
+	senderPublicKey, senderPrivateKey := Keygen_Box()
+	receiverPublicKey, receiverPrivateKey := Keygen_Box()
+
+	sessionToken := SessionToken{}
+	sessionToken.ExpireTimestamp = uint64(time.Now().Unix() + 20)
+	RandomBytes_InPlace(sessionToken.SessionId[:])
+	RandomBytes_InPlace(sessionToken.UserId[:])
+
+	_ = senderPublicKey
+	_ = senderPrivateKey
+	_ = receiverPublicKey
+	_ = receiverPrivateKey
+
+	// write the session token to a buffer and read it back in
+
+	buffer := make([]byte, EncryptedSessionTokenBytes)
+
+	index := 0
+
+	WriteSessionToken(buffer, &index, &sessionToken)
+	
+	assert.Equal(t, index, SessionTokenBytes)
+
+	var readSessionToken SessionToken
+
+	index = 0
+
+	result := ReadSessionToken(buffer, &index, &readSessionToken)
+
+	assert.True(t, result)
+	assert.Equal(t, sessionToken, readSessionToken)
+	assert.Equal(t, index, SessionTokenBytes)
+
+	// can't read a token if the buffer is too small
+
+	index = 0
+
+	result = ReadSessionToken(buffer[:5], &index, &readSessionToken)
+
+	assert.False(t, result)
+
+	// write an encrypted session token and read it back
+
+	index = 0
+	WriteEncryptedSessionToken(buffer, &index, &sessionToken, senderPrivateKey, receiverPublicKey)
+	assert.Equal(t, index, EncryptedSessionTokenBytes)
+
+	index = 0
+	result = ReadEncryptedSessionToken(buffer, &index, &readSessionToken, senderPublicKey, receiverPrivateKey)
+	assert.Equal(t, index, EncryptedSessionTokenBytes)
+
+	assert.True(t, result)
+	assert.Equal(t, sessionToken, readSessionToken)
+
+	// can't read an encrypted session token if the buffer is too small
+
+	index = 0
+	result = ReadEncryptedSessionToken(buffer[:5], &index, &readSessionToken, senderPublicKey, receiverPrivateKey)
+	assert.False(t, result)
+
+	// can't read an encrypted session token if the buffer is garbage
+
+	buffer = make([]byte, EncryptedSessionTokenBytes)
+	result = ReadEncryptedSessionToken(buffer, &index, &readSessionToken, senderPublicKey, receiverPrivateKey)
+	assert.False(t, result)
+}

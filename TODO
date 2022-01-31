@@ -2,13 +2,15 @@ DONE
 
 	Sketch out the session token
 
-TODO
-
 	Sketch out connect data
+
+TODO
 
 	Add tests for read and write session token, encrypt/decrypt etc.
 
 	Add tests for connect data
+
+	--------
 
 	Write function to generate connect token, inputs are gateway address, gateway public key. generates random session id.
 
