@@ -706,46 +706,44 @@ type SessionToken struct {
 const SessionTokenBytes = 8 + SessionIdBytes + UserIdBytes
 const EncryptedSessionTokenBytes = NonceBytes_SecretBox + SessionTokenBytes + HMACBytes_SecretBox
 
-/*
-func WriteChallengeToken(buffer []byte, index *int, token *ChallengeToken) {
+func WriteSessionToken(buffer []byte, index *int, token *SessionToken) {
 	WriteUint64(buffer, index, token.ExpireTimestamp)
-	WriteAddress(buffer, index, &token.ClientAddress)
-	WriteUint64(buffer, index, token.Sequence)
+	WriteBytes(buffer, index, token.SessionId[:], SessionIdBytes)
+	WriteBytes(buffer, index, token.UserId[:], UserIdBytes)
 }
 
-func ReadChallengeToken(buffer []byte, index *int, token *ChallengeToken) bool {
-	if len(buffer) - *index < ChallengeTokenBytes {
+func ReadSessionToken(buffer []byte, index *int, token *SessionToken) bool {
+	if len(buffer) - *index < SessionTokenBytes {
 		return false
 	}
 	ReadUint64(buffer, index, &token.ExpireTimestamp)
-	ReadAddress(buffer, index, &token.ClientAddress)
-	ReadUint64(buffer, index, &token.Sequence)
+	ReadBytes(buffer, index, token.SessionId[:], SessionIdBytes)
+	ReadBytes(buffer, index, token.UserId[:], UserIdBytes)
 	return true
 }
 
-func WriteEncryptedChallengeToken(buffer []byte, index *int, token *ChallengeToken, privateKey []byte) {
-	nonce := buffer[*index:*index+NonceBytes_SecretBox]
+func WriteEncryptedSessionToken(buffer []byte, index *int, token *SessionToken, senderPrivateKey []byte, receiverPublicKey []byte) {
+	nonce := buffer[*index:*index+NonceBytes_Box]
 	RandomBytes_InPlace(nonce)
-	*index += NonceBytes_SecretBox
-	tokenData := buffer[*index:*index+ChallengeTokenBytes+HMACBytes_SecretBox]
-	WriteChallengeToken(buffer, index, token)
-	Encrypt_SecretBox(privateKey, nonce, tokenData, ChallengeTokenBytes)
-	*index += HMACBytes_SecretBox
+	*index += NonceBytes_Box
+	tokenData := buffer[*index:*index+SessionTokenBytes+HMACBytes_Box]
+	WriteSessionToken(buffer, index, token)
+	Encrypt_Box(senderPrivateKey, receiverPublicKey, nonce, tokenData, SessionTokenBytes)
+	*index += HMACBytes_Box
 }
 
-func ReadEncryptedChallengeToken(buffer []byte, index *int, token *ChallengeToken, privateKey []byte) bool {
-	if len(buffer) - *index < EncryptedChallengeTokenBytes {
+func ReadEncryptedSessionToken(buffer []byte, index *int, token *SessionToken, senderPublicKey []byte, receiverPrivateKey []byte) bool {
+	if len(buffer) - *index < EncryptedSessionTokenBytes {
 		return false
 	}
-	nonce := buffer[*index:*index+NonceBytes_SecretBox]
-	*index += NonceBytes_SecretBox
-	tokenData := buffer[*index:*index+ChallengeTokenBytes+HMACBytes_SecretBox]
-	err := Decrypt_SecretBox(privateKey, nonce, tokenData, ChallengeTokenBytes+HMACBytes_SecretBox)	
+	nonce := buffer[*index:*index+NonceBytes_Box]
+	*index += NonceBytes_Box
+	tokenData := buffer[*index:*index+SessionTokenBytes+HMACBytes_Box]
+	err := Decrypt_Box(senderPublicKey, receiverPrivateKey, nonce, tokenData, SessionTokenBytes+HMACBytes_Box)
 	if err != nil {
 		return false
 	}
-	result := ReadChallengeToken(buffer, index, token)
-	*index += HMACBytes_SecretBox
+	result := ReadSessionToken(buffer, index, token)
+	*index += HMACBytes_Box
 	return result
 }
-*/
