@@ -60,15 +60,33 @@ DONE
 
 	Confirmed.
 
-TODO
-
-	---------------
-
 	Implement a new backend service "auth". 
 
 	Its job is to generate connect tokens when asked for a given user id, and to extend session tokens while a session is connected.
 
-	The backend is presumed to talk to auth to get the initial connect token.
+TODO
+
+	---------------
+
+	Auth service needs to know the auth private key and the gateway public key.
+
+	---------------
+
+	Implement an endpoint on auth to create a connect token "/connect_token?user_id=1234021410"
+
+	Input should be the user id as a hex string.
+
+	Output should be the base64 of the connect token.
+
+	---------------
+
+	Implement an endpoint on auth to extend a session token. 
+
+	Input is the current session token (as base64?). 
+
+	Output is the current session token (as base64?)
+
+	---------------
 
 	The gateway talks to auth to extend the session token +10 seconds.
 

@@ -71,7 +71,7 @@ dev-server: build-server ## runs a local server
 
 .PHONY: dev-auth
 dev-auth: build-auth ## runs a local auth
-	HTTP_PORT=60000 ./dist/auth
+	HTTP_PORT=60000 GATEWAY_PUBLIC_KEY=vnIjsJWZzgq+nS9t3KU7ch5BFhgDkm2U2bm7/2W6eRs= AUTH_PRIVATE_KEY=VmmdIRwxUb7vmzupzHbBHqJF3WPpLrp0Y0EzepAzny0= ./dist/auth
 
 .PHONY: connect-token
 connect-token: build-connect-token ## generate connect token
