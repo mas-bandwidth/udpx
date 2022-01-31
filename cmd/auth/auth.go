@@ -39,6 +39,7 @@ import (
 	"os/signal"
 	"syscall"
 	"net"
+	"time"
 
 	"github.com/networknext/udpx/modules/core"
 	"github.com/networknext/udpx/modules/envvar"
@@ -55,6 +56,7 @@ func main() {
 var GatewayAddress *net.UDPAddr
 var GatewayPublicKey [core.PublicKeyBytes_Box]byte
 var GatewayPrivateKey [core.PrivateKeyBytes_Box]byte
+var AuthPublicKey [core.PublicKeyBytes_Box]byte
 var AuthPrivateKey [core.PrivateKeyBytes_Box]byte
 
 func mainReturnWithCode() int {
@@ -83,6 +85,12 @@ func mainReturnWithCode() int {
 		return 1
 	}
 
+	authPublicKey, err := envvar.GetBase64("AUTH_PUBLIC_KEY", nil)
+	if err != nil || len(authPublicKey) != core.PublicKeyBytes_Box {
+		core.Error("missing or invalid AUTH_PUBLIC_KEY: %v", err)
+		return 1
+	}
+
 	authPrivateKey, err := envvar.GetBase64("AUTH_PRIVATE_KEY", nil)
 	if err != nil || len(authPrivateKey) != core.PrivateKeyBytes_Box {
 		core.Error("missing or invalid AUTH_PRIVATE_KEY: %v", err)
@@ -92,6 +100,7 @@ func mainReturnWithCode() int {
 	GatewayAddress = gatewayAddress
 	copy(GatewayPublicKey[:], gatewayPublicKey[:])
 	copy(GatewayPrivateKey[:], gatewayPrivateKey[:])
+	copy(AuthPublicKey[:], authPublicKey[:])
 	copy(AuthPrivateKey[:], authPrivateKey[:])
 
 	// start web server
@@ -155,12 +164,42 @@ func connectTokenHandler(w http.ResponseWriter, r *http.Request) {
 
 func sessionTokenHandler(w http.ResponseWriter, r *http.Request) {
 	
-	// todo: read in the current session token from octet-stream from POST
-	// https://stackoverflow.com/questions/37462349/sending-octet-stream
+	requestData, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+	    http.Error(w, err.Error(), http.StatusBadRequest)
+	    return
+	}
 
-	sessionToken := make([]byte, 256)
+	if len(requestData) != core.EncryptedSessionTokenBytes {
+		fmt.Printf("bad request length (%d)\n", len(requestData))
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	index := 0
+	var sessionToken core.SessionToken
+	result := core.ReadEncryptedSessionToken(requestData, &index, &sessionToken, AuthPublicKey[:], GatewayPrivateKey[:])
+	if !result {
+		fmt.Printf("invalid session token\n")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if sessionToken.ExpireTimestamp < uint64(time.Now().Unix()) {
+		fmt.Printf("session token has expired\n")
+		w.WriteHeader(http.StatusBadRequest)
+		return		
+	}
+
+	sessionToken.ExpireTimestamp += core.SessionTokenExtensionSeconds
+
+	index = 0
+	responseData := [core.EncryptedSessionTokenBytes]byte{}
+	core.WriteEncryptedSessionToken(responseData[:], &index, &sessionToken, AuthPrivateKey[:], GatewayPublicKey[:])
+
+	core.Info("updated session token %s", core.IdString(sessionToken.SessionId[:]))
 
 	w.Header().Set("Content-Type", "application/octet-stream") 
 	w.WriteHeader(http.StatusOK)
-	w.Write(sessionToken)
+	w.Write(responseData[:])
 }
