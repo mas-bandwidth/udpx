@@ -747,3 +747,27 @@ func ReadEncryptedSessionToken(buffer []byte, index *int, token *SessionToken, s
 	*index += HMACBytes_Box
 	return result
 }
+
+type ConnectData struct {
+	SessionId [SessionIdBytes]byte
+	GatewayAddress net.UDPAddr
+	GatewayPublicKey [PublicKeyBytes_Box]byte
+}
+
+const ConnectDataBytes = 8 + AddressBytes + PublicKeyBytes_Box
+
+func WriteConnectData(buffer []byte, index *int, connectData *ConnectData) {
+	WriteBytes(buffer, index, connectData.SessionId[:], SessionIdBytes)
+	WriteAddress(buffer, index, &connectData.GatewayAddress)
+	WriteBytes(buffer, index, connectData.GatewayPublicKey[:], UserIdBytes)
+}
+
+func ReadConnectData(buffer []byte, index *int, connectData *ConnectData) bool {
+	if len(buffer) - *index < ConnectDataBytes {
+		return false
+	}
+	ReadBytes(buffer, index, connectData.SessionId[:], SessionIdBytes)
+	WriteAddress(buffer, index, &connectData.GatewayAddress)
+	ReadBytes(buffer, index, connectData.GatewayPublicKey[:], PublicKeyBytes_Box)
+	return true
+}
