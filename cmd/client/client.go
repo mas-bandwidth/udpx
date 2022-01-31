@@ -102,9 +102,6 @@ func mainReturnWithCode() int {
 	clientPrivateKey := connectData.ClientPrivateKey[:]
 	sessionId := clientPublicKey
 
-	// todo
-	_ = sessionToken
-
 	var gatewayId [core.GatewayIdBytes]byte
 	var serverId [core.ServerIdBytes]byte
 

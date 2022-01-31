@@ -100,6 +100,12 @@ func mainReturnWithCode() int {
 		return 1
 	}
 
+	authPublicKey, err := envvar.GetBase64("AUTH_PUBLIC_KEY", nil)
+	if err != nil || len(authPublicKey) != core.PublicKeyBytes_Box {
+		core.Error("missing or invalid AUTH_PUBLIC_KEY: %v", err)
+		return 1
+	}
+
 	numThreads, err := envvar.GetInt("NUM_THREADS", 1)
 	if err != nil {
 		core.Error("invalid NUM_THREADS: %v", err)
@@ -277,6 +283,14 @@ func mainReturnWithCode() int {
 						core.Debug("advanced packet filter failed")
 						continue
 					}
+
+					// verify session token
+
+					sessionTokenIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes
+					sessionToken := packetData[sessionTokenIndex:sessionTokenIndex+core.EncryptedSessionTokenBytes]
+
+					// todo
+					_ = sessionToken
 
 					// decrypt packet
 

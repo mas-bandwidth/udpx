@@ -807,4 +807,3 @@ func GenerateConnectToken(userId []byte, gatewayAddress *net.UDPAddr, gatewayPub
 
 	return buffer
 }
-

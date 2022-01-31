@@ -42,16 +42,15 @@ DONE
 
 	Server does not need to see or know about the session token for now, keep it at the gateway level (like the chonkle).
 
-TODO
-
-	---------------
-
 	Get the client and gateway working with the new packet structure first.
 
 	Right now, stuck on client not being able to decrypt payload packet. Something wrong there.
 
-	---------------
+	Client connects.
 
+TODO
+
+	---------------
 
 	Gateway decrypts the session token
 
