@@ -33,6 +33,12 @@ build-server: dist
 	@$(GO) build -o ${DIST_DIR}/server ./cmd/server/server.go
 	@printf "done\n"
 
+.PHONY: build-auth
+build-auth: dist
+	@printf "Building auth... "
+	@$(GO) build -o ${DIST_DIR}/auth ./cmd/auth/auth.go
+	@printf "done\n"
+
 .PHONY: build-connect-token
 build-connect-token: dist
 	@printf "Building connect token... "
@@ -63,6 +69,10 @@ dev-gateway: build-gateway ## runs a local gateway
 dev-server: build-server ## runs a local server
 	HTTP_PORT=50000 UDP_PORT=50000 ./dist/server
 
+.PHONY: dev-auth
+dev-auth: build-auth ## runs a local auth
+	HTTP_PORT=60000 ./dist/auth
+
 .PHONY: connect-token
 connect-token: build-connect-token ## generate connect token
 	GATEWAY_ADDRESS=127.0.0.1:40000 GATEWAY_PUBLIC_KEY=vnIjsJWZzgq+nS9t3KU7ch5BFhgDkm2U2bm7/2W6eRs= AUTH_PRIVATE_KEY=VmmdIRwxUb7vmzupzHbBHqJF3WPpLrp0Y0EzepAzny0= ./dist/connect_token
@@ -84,7 +94,7 @@ format:
 	@$(GOFMT) -s -w .
 
 .PHONY: build-all
-build-all: build-client build-gateway build-server keygen connect-token soak ## builds everything
+build-all: build-client build-gateway build-server build-auth build-soak build-keygen build-connect-token ## builds everything
 
 .PHONY: rebuild-all
 rebuild-all: clean build-all ## rebuilds everything
