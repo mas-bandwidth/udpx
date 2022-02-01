@@ -40,6 +40,7 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+	"sync"
 
 	"github.com/networknext/udpx/modules/core"
 	"github.com/networknext/udpx/modules/envvar"
@@ -95,14 +96,19 @@ func mainReturnWithCode() int {
 		return 1
 	}
 
+	var sessionTokenMutex sync.RWMutex
 	sessionTokenData := connectToken[core.ConnectDataBytes:]
+
 	gatewayAddress := &connectData.GatewayAddress
 	gatewayPublicKey := connectData.GatewayPublicKey[:]
 	clientPublicKey := connectData.ClientPublicKey[:]
 	clientPrivateKey := connectData.ClientPrivateKey[:]
 	sessionId := clientPublicKey
 
+	var gatewayIdMutex sync.RWMutex
 	var gatewayId [core.GatewayIdBytes]byte
+
+	var serverIdMutex sync.RWMutex
 	var serverId [core.ServerIdBytes]byte
 
 	core.Info("starting client on port %s", udpPort)
@@ -218,13 +224,13 @@ func mainReturnWithCode() int {
 						ack_bits[30],
 						ack_bits[31])
 
-					// todo: reading and writing to gateway id and server id from different threads = no no no
-
 					core.WriteUint8(packetData, &index, version)
 					core.WriteUint8(packetData, &index, core.PayloadPacket)
 					chonkle := packetData[index : index+core.ChonkleBytes]
 					index += core.ChonkleBytes
+					sessionTokenMutex.RLock()
 					core.WriteBytes(packetData, &index, sessionTokenData, core.EncryptedSessionTokenBytes)
+					sessionTokenMutex.RUnlock()
 					core.WriteBytes(packetData, &index, sessionId, core.SessionIdBytes)
 					sequenceData := packetData[index : index+core.SequenceBytes]
 					core.WriteUint64(packetData, &index, sendSequence)
@@ -234,9 +240,13 @@ func mainReturnWithCode() int {
 					if hasChallengeToken {
 						core.WriteBytes(packetData, &index, challengeTokenGatewayId[:], core.GatewayIdBytes)
 					} else {
+						gatewayIdMutex.RLock()
 						core.WriteBytes(packetData, &index, gatewayId[:], core.GatewayIdBytes)
+						gatewayIdMutex.RUnlock()
 					}
+					serverIdMutex.RLock()
 					core.WriteBytes(packetData, &index, serverId[:], core.ServerIdBytes)
+					serverIdMutex.RUnlock()
 					core.WriteUint8(packetData, &index, core.PayloadPacket)
 					if hasChallengeToken {
 						core.WriteUint8(packetData, &index, core.Flags_ChallengeToken)
@@ -456,12 +466,16 @@ func mainReturnWithCode() int {
 
 						// ---------------------------------
 
-						// HACK HACK HACK
-						// update the client's session token whenever a payload packet is received
+						// todo: check the session token sequence to see if this sequence is more recent
+						
 						sessionTokenDataIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes
+						
 						packetSessionTokenData := packetData[sessionTokenDataIndex : sessionTokenDataIndex+core.EncryptedSessionTokenBytes]
+
+						sessionTokenMutex.Lock()
 						sessionTokenData = make([]byte, core.EncryptedSessionTokenBytes)
 						copy(sessionTokenData[:], packetSessionTokenData[:])
+						sessionTokenMutex.Unlock()
 
 						// ---------------------------------
 
@@ -537,10 +551,12 @@ func mainReturnWithCode() int {
 
 						packetGatewayId := packetData[gatewayIdIndex : gatewayIdIndex+core.GatewayIdBytes]
 
+						gatewayIdMutex.Lock()
 						if !core.IdEqual(packetGatewayId, gatewayId[:]) {
 							core.Info("connected to gateway %s", core.IdString(packetGatewayId))
 							copy(gatewayId[:], packetGatewayId[:])
 						}
+						gatewayIdMutex.Unlock()
 
 						// check if we have a new server
 
@@ -548,10 +564,13 @@ func mainReturnWithCode() int {
 
 						packetServerId := packetData[serverIdIndex : serverIdIndex+core.ServerIdBytes]
 
-						if !core.IdEqual(packetServerId, serverId[:]) {
+						serverIdMutex.Lock()
+						newServer := !core.IdEqual(packetServerId, serverId[:]) 
+						if newServer {
 							core.Info("connected to server %s", core.IdString(packetServerId))
 							copy(serverId[:], packetServerId[:])
 						}
+						serverIdMutex.Unlock()
 
 						// clear challenge token
 

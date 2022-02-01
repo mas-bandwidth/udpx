@@ -1,42 +1,16 @@
 DONE
 
-	Get the session token update request from teh gateway working.
-
-	Right now it passes in the session token and the auth service just can't decrypt it.
-
-	It was because the session token data was modified in place on decryption. Fixed with a copy pre-decrypt.
-
-	Now I need to get the response processed and handled in the goroutine.
-
-	OK, session handler gets the updated session token from teh channel.
-
-	Now I need to store the session token data in the session token entry.
-
-	This way the gateway can always return back the most recent one to the client.
-
-	The client will then eventually get it, and pass the updated one back up.
-
-	OK. The gateway actually needs to pass the whole session token up to the server, and then it needs to go back down to the gateway, and back down to the client.
-
-	Otherwise there is contention on the session map between the public UDP socket thread and the internal UDP socket thread.
-
-	Extend gateway to pass back up the session token to the server when forwarding a payload packet.
-
-	Extend gateway to grab the session token for the client from the front of the packet sent from the server, and stick it in the packet sent down to the client.
-
-	The client should, for the moment, just take the session token in each payload packet received and store it.
-
-	Verify the client maintains connection now, past the initial 20 seconds, and updates the session token every 10 secs.
-
-	The gateway needs to check session token expiry itself via its own session token expire time, updated when a new session token is updated.
-
-	Right now it is just repeatedly requesting a new session token, because the client is still sending up the old session token.
+	Add a mutex to protect the session token on the client. We can't write to and read from it from different threads.
 
 TODO
 
 	---------------
 
-	Add a mutex to protect the session token on the client. We can't write to and read from it from different threads.
+	Add mutex on client around gateway id
+
+	---------------
+
+	Add mutex on client around server id
 
 	---------------
 
