@@ -799,11 +799,7 @@ func ReadConnectData(buffer []byte, index *int, connectData *ConnectData) bool {
 
 const ConnectTokenBytes = ConnectDataBytes + EncryptedSessionTokenBytes
 
-func GenerateConnectToken(userId []byte, gatewayAddress *net.UDPAddr, gatewayPublicKey []byte, senderPrivateKey []byte, receiverPublicKey []byte) []byte {
-
-	// todo: need to pass in envelopeUp, envelopeDown
-	envelopeUpKbps := uint32(2500)
-	envelopeDownKbps := uint32(10000)
+func GenerateConnectToken(userId []byte, envelopeUpKbps uint32, envelopeDownKbps uint32, gatewayAddress *net.UDPAddr, gatewayPublicKey []byte, senderPrivateKey []byte, receiverPublicKey []byte) []byte {
 
 	publicKey, privateKey := Keygen_Box()
 
