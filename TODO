@@ -6,9 +6,18 @@ DONE
 
 	It was because the session token data was modified in place on decryption. Fixed with a copy pre-decrypt.
 
+	Now I need to get the response processed and handled in the goroutine.
+
+	OK, session handler gets the updated session token from teh channel.
+
 TODO
 
-	Now I need to get the response processed and handled in the goroutine. Stopping for now.
+	Now I need to store the session token data in the session token entry.
+
+	This way the gateway can always return back the most recent one to the client.
+
+	The client will then eventually get it, and pass the updated one back up.
+
 
 
 

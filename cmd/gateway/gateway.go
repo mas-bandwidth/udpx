@@ -64,7 +64,7 @@ type SessionEntry struct {
 	ReceivedSequence     uint64
 	ReceivedPackets      [OldSequenceThreshold]uint64
 	UpdatingSessionToken bool
-	SessionToken         chan [1][]byte
+	SessionTokenChannel  chan []byte
 }
 
 func main() {
@@ -436,6 +436,7 @@ func mainReturnWithCode() int {
 							}
 
 							sessionEntry := &SessionEntry{ReceivedSequence: challengeToken.Sequence}
+							sessionEntry.SessionTokenChannel = make(chan []byte, 1)
 							sessionMap_New[sessionId] = sessionEntry
 
 							core.Info("new session %s from %s", core.IdString(sessionId[:]), from.String())
@@ -551,11 +552,9 @@ func mainReturnWithCode() int {
 
 						sessionEntry.UpdatingSessionToken = true
 
-						fmt.Printf("updating session token for session %s\n", core.IdString(sessionToken.SessionId[:]))
+						core.Debug("updating session token for session %s", core.IdString(sessionToken.SessionId[:]))
 
-						go func(updateSessionTokenData [core.EncryptedSessionTokenBytes]byte) {
-
-							fmt.Printf("update session token data %d bytes\n", len(updateSessionTokenData))
+						go func(channel chan[]byte, inputSessionTokenData [core.EncryptedSessionTokenBytes]byte) {
 
 							var netTransport = &http.Transport{
 							  Dial: (&net.Dialer{
@@ -569,20 +568,63 @@ func mainReturnWithCode() int {
 							  Transport: netTransport,
 							}
 														
-							r, err := http.NewRequest("POST", "http://localhost:60000/session_token", bytes.NewBuffer(updateSessionTokenData[:]))
+							r, err := http.NewRequest("POST", "http://localhost:60000/session_token", bytes.NewBuffer(inputSessionTokenData[:]))
 							if err != nil {
-							    fmt.Printf("failed to create post request for session %s: %v\n", core.IdString(sessionToken.SessionId[:]), err)
+							    core.Debug("failed to create post request: %v", err)
+							    channel <- make([]byte, 0)
 							    return
 							}
 							response, err := c.Do(r)
 
 							if response == nil {
-								fmt.Printf("nil response\n")
-							} else {
-								fmt.Printf("response: %s, %v\n", response.Status, err)
+								core.Debug("nil response from post")
+							    channel <- make([]byte, 0)
+								return
 							}
 
-						}(sessionTokenDataCopy)
+							defer response.Body.Close()
+							   
+							if err != nil {
+								core.Debug("error on post request: %s", err)
+							    channel <- make([]byte, 0)
+								return
+							}
+
+							responseData, err := ioutil.ReadAll(response.Body)
+							if err != nil {
+								core.Debug("error reading response data: %v")
+							    channel <- make([]byte, 0)
+								return
+							}
+
+							if len(responseData) != core.EncryptedSessionTokenBytes {
+								core.Debug("bad response size: %d", len(responseData))
+							    channel <- make([]byte, 0)
+								return
+							}
+
+							index := 0
+							var tempSessionToken core.SessionToken
+							result := core.ReadEncryptedSessionToken(responseData[:], &index, &tempSessionToken, authPublicKey[:], gatewayPrivateKey[:])
+							if !result {
+								core.Debug("invalid session token")
+							    channel <- make([]byte, 0)
+								return
+							}
+
+						    channel <- responseData
+
+						}(sessionEntry.SessionTokenChannel, sessionTokenDataCopy)
+					}
+
+					if sessionEntry.UpdatingSessionToken {
+						select {
+						case sessionToken := <-sessionEntry.SessionTokenChannel:
+							if len(sessionToken) != 0 {
+								core.Info("updated session token for session %s", core.IdString(sessionId[:]))
+							}
+						default:
+						}
 					}
 
 					// forward payload packet to server
