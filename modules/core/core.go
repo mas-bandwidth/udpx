@@ -166,9 +166,9 @@ func Error(s string, params ...interface{}) {
 }
 
 func Debug(s string, params ...interface{}) {
-	// if debugLogs {
+	if debugLogs {
 		fmt.Printf(s+"\n", params...)
-	// }
+	}
 }
 
 func Info(s string, params ...interface{}) {

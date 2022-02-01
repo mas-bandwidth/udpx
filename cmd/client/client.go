@@ -95,7 +95,7 @@ func mainReturnWithCode() int {
 		return 1
 	}
 
-	sessionToken := connectToken[core.ConnectDataBytes:]
+	sessionTokenData := connectToken[core.ConnectDataBytes:]
 	gatewayAddress := &connectData.GatewayAddress
 	gatewayPublicKey := connectData.GatewayPublicKey[:]
 	clientPublicKey := connectData.ClientPublicKey[:]
@@ -224,7 +224,7 @@ func mainReturnWithCode() int {
 					core.WriteUint8(packetData, &index, core.PayloadPacket)
 					chonkle := packetData[index : index+core.ChonkleBytes]
 					index += core.ChonkleBytes
-					core.WriteBytes(packetData, &index, sessionToken, core.EncryptedSessionTokenBytes)
+					core.WriteBytes(packetData, &index, sessionTokenData, core.EncryptedSessionTokenBytes)
 					core.WriteBytes(packetData, &index, sessionId, core.SessionIdBytes)
 					sequenceData := packetData[index : index+core.SequenceBytes]
 					core.WriteUint64(packetData, &index, sendSequence)
@@ -453,6 +453,16 @@ func mainReturnWithCode() int {
 						}
 
 						receivedPackets[sequence%SequenceBufferSize] = sequence
+
+						// ---------------------------------
+
+						// HACK HACK HACK
+						// update the client's session token whenever a payload packet is received
+						sessionTokenDataIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes
+						packetSessionTokenData := packetData[sessionTokenDataIndex:sessionTokenDataIndex+core.EncryptedSessionTokenBytes]
+						copy(sessionTokenData[:], packetSessionTokenData[:])
+
+						// ---------------------------------
 
 						// process payload packet
 

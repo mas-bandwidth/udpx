@@ -24,11 +24,23 @@ DONE
 
 	Extend gateway to grab the session token for the client from the front of the packet sent from the server, and stick it in the packet sent down to the client.
 
-TODO
-
 	The client should, for the moment, just take the session token in each payload packet received and store it.
 
 	Verify the client maintains connection now, past the initial 20 seconds, and updates the session token every 10 secs.
+
+TODO
+
+	The gateway needs to check session token expiry itself via its own session token expire time, updated when a new session token is updated.
+
+	Right now it is just repeatedly requesting a new session token, because the client is still sending up the old session token.
+
+
+
+
+
+
+
+
 
 	-------------
 

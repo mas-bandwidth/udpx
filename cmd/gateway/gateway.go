@@ -623,6 +623,7 @@ func mainReturnWithCode() int {
 							if len(sessionToken) != 0 {
 								core.Info("updated session token for session %s", core.IdString(sessionId[:]))
 							}
+							sessionEntry.UpdatingSessionToken = false
 						default:
 						}
 					}
