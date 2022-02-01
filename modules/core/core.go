@@ -166,9 +166,9 @@ func Error(s string, params ...interface{}) {
 }
 
 func Debug(s string, params ...interface{}) {
-	if debugLogs {
+	// if debugLogs {
 		fmt.Printf(s+"\n", params...)
-	}
+	// }
 }
 
 func Info(s string, params ...interface{}) {
@@ -806,15 +806,7 @@ func GenerateConnectToken(userId []byte, gatewayAddress *net.UDPAddr, gatewayPub
 
 	WriteConnectData(buffer, &index, &connectData)
 
-	if index != ConnectDataBytes {
-		panic("wut 1")
-	}
-
 	WriteEncryptedSessionToken(buffer, &index, &sessionToken, senderPrivateKey, receiverPublicKey)
-
-	if index != ConnectTokenBytes {
-		panic("wut 2")
-	}
 
 	return buffer
 }

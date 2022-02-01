@@ -65,6 +65,7 @@ type SessionEntry struct {
 	ReceivedPackets      [OldSequenceThreshold]uint64
 	UpdatingSessionToken bool
 	SessionTokenChannel  chan []byte
+	SessionTokenData     [core.EncryptedSessionTokenBytes]byte
 }
 
 func main() {
@@ -302,14 +303,12 @@ func mainReturnWithCode() int {
 					var sessionToken core.SessionToken
 					result := core.ReadEncryptedSessionToken(sessionTokenData, &index, &sessionToken, authPublicKey, gatewayPrivateKey)
 					if !result {
-						// todo: debug
-						core.Error("could not decrypt session token")
+						core.Debug("could not decrypt session token")
 						continue
 					}
 
 					if sessionToken.ExpireTimestamp < uint64(time.Now().Unix()) {
-						// todo: debug
-						core.Error("session token has expired")
+						core.Debug("session token has expired")
 						continue
 					}
 
@@ -321,7 +320,7 @@ func mainReturnWithCode() int {
 					copy(sessionId[:], senderPublicKey[:])
 
 					if !core.IdEqual(sessionToken.SessionId[:], sessionId[:]) {
-						core.Error("session id mismatch")
+						core.Debug("session id mismatch")
 						continue
 					}
 
@@ -437,6 +436,7 @@ func mainReturnWithCode() int {
 
 							sessionEntry := &SessionEntry{ReceivedSequence: challengeToken.Sequence}
 							sessionEntry.SessionTokenChannel = make(chan []byte, 1)
+							copy(sessionEntry.SessionTokenData[:], sessionTokenDataCopy[:])
 							sessionMap_New[sessionId] = sessionEntry
 
 							core.Info("new session %s from %s", core.IdString(sessionId[:]), from.String())
@@ -638,6 +638,7 @@ func mainReturnWithCode() int {
 					core.WriteUint8(forwardPacketData, &index, version)
 					core.WriteAddress(forwardPacketData, &index, gatewayInternalAddress)
 					core.WriteAddress(forwardPacketData, &index, from)
+					core.WriteBytes(forwardPacketData[:], &index, sessionEntry.SessionTokenData[:], core.EncryptedSessionTokenBytes)
 					core.WriteBytes(forwardPacketData, &index, header, core.HeaderBytes)
 					core.WriteBytes(forwardPacketData, &index, payload, len(payload))
 
@@ -724,7 +725,8 @@ func mainReturnWithCode() int {
 
 					core.Debug("recv internal %d byte packet from %s", packetBytes, from.String())
 
-					if packetBytes <= core.PacketTypeBytes+core.VersionBytes+core.AddressBytes {
+					// todo: it's actually much larger than this that is the minimum...
+					if packetBytes <= core.PacketTypeBytes + core.VersionBytes + core.AddressBytes {
 						core.Debug("internal packet is too small")
 						continue
 					}
@@ -745,9 +747,13 @@ func mainReturnWithCode() int {
 					var clientAddress net.UDPAddr
 					core.ReadAddress(packetData, &index, &clientAddress)
 
+					// grab the session token
+
+					sessionTokenData := packetData[index:index+core.EncryptedSessionTokenBytes]
+
 					// split the packet apart into sections
 
-					headerIndex := core.VersionBytes + core.PacketTypeBytes + core.AddressBytes
+					headerIndex := core.VersionBytes + core.PacketTypeBytes + core.AddressBytes + core.EncryptedSessionTokenBytes
 
 					payloadIndex := headerIndex + core.HeaderBytes
 					payloadBytes := len(packetData) - payloadIndex
@@ -771,8 +777,7 @@ func mainReturnWithCode() int {
 					core.WriteUint8(forwardPacketData, &index, core.PayloadPacket)
 					chonkle := forwardPacketData[index : index+core.ChonkleBytes]
 					index += core.ChonkleBytes
-					// todo: session token
-					index += core.EncryptedSessionTokenBytes
+					core.WriteBytes(forwardPacketData, &index, sessionTokenData, core.EncryptedSessionTokenBytes)
 					core.WriteBytes(forwardPacketData, &index, header, core.HeaderBytes)
 					core.WriteBytes(forwardPacketData, &index, payload, payloadBytes)
 					encryptFinish := index

@@ -10,15 +10,39 @@ DONE
 
 	OK, session handler gets the updated session token from teh channel.
 
-TODO
-
 	Now I need to store the session token data in the session token entry.
 
 	This way the gateway can always return back the most recent one to the client.
 
 	The client will then eventually get it, and pass the updated one back up.
 
+	OK. The gateway actually needs to pass the whole session token up to the server, and then it needs to go back down to the gateway, and back down to the client.
 
+	Otherwise there is contention on the session map between the public UDP socket thread and the internal UDP socket thread.
+
+	Extend gateway to pass back up the session token to the server when forwarding a payload packet.
+
+	Extend gateway to grab the session token for the client from the front of the packet sent from the server, and stick it in the packet sent down to the client.
+
+TODO
+
+	The client should, for the moment, just take the session token in each payload packet received and store it.
+
+	Verify the client maintains connection now, past the initial 20 seconds, and updates the session token every 10 secs.
+
+	-------------
+
+	Now the client should only update the session token if it is newer.
+
+	To establish newness, we need a 64bit sequence number riding along with each session token.
+
+	When a new session token comes along, the client updates to it, and updates its own session token sequence.
+
+	The client also sets an expire time for the session token at initially 20 seconds (connect), and then subsequently 10 seconds after each session token update.
+
+	When the client detects that the session token has expired, the client times out and prints "disconnected" before exiting.
+
+	-------------
 
 
 
