@@ -46,6 +46,7 @@ import (
 	"sync"
 	"syscall"
 	"time"
+	"bytes"
 
 	"github.com/networknext/udpx/modules/core"
 	"github.com/networknext/udpx/modules/envvar"
@@ -60,8 +61,10 @@ const ChallengeTokenTimeout = 10
 const OldSequenceThreshold = 100
 
 type SessionEntry struct {
-	ReceivedSequence uint64
-	ReceivedPackets  [OldSequenceThreshold]uint64
+	ReceivedSequence     uint64
+	ReceivedPackets      [OldSequenceThreshold]uint64
+	UpdatingSessionToken bool
+	SessionToken         chan [1][]byte
 }
 
 func main() {
@@ -284,10 +287,16 @@ func mainReturnWithCode() int {
 						continue
 					}
 
-					// verify session token
+					// before we decrypt the session token, save a copy so we can use it later
 
 					sessionTokenIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes
-					sessionTokenData := packetData[sessionTokenIndex:sessionTokenIndex+core.EncryptedSessionTokenBytes]
+					sessionTokenData := packetData[sessionTokenIndex : sessionTokenIndex+core.EncryptedSessionTokenBytes]
+
+					var sessionTokenDataCopy [core.EncryptedSessionTokenBytes]byte
+
+					copy(sessionTokenDataCopy[:], sessionTokenData[:])
+
+					// verify session token
 
 					index := 0
 					var sessionToken core.SessionToken
@@ -534,6 +543,46 @@ func mainReturnWithCode() int {
 
 					if sessionEntry.ReceivedPackets[sequence%OldSequenceThreshold] == sequence {
 						core.Debug("packet %d has already been forwarded to the server", sequence)
+					}
+
+					// update session token
+
+					if sessionToken.ExpireTimestamp - uint64(10) <= uint64(time.Now().Unix()) && !sessionEntry.UpdatingSessionToken {
+
+						sessionEntry.UpdatingSessionToken = true
+
+						fmt.Printf("updating session token for session %s\n", core.IdString(sessionToken.SessionId[:]))
+
+						go func(updateSessionTokenData [core.EncryptedSessionTokenBytes]byte) {
+
+							fmt.Printf("update session token data %d bytes\n", len(updateSessionTokenData))
+
+							var netTransport = &http.Transport{
+							  Dial: (&net.Dialer{
+							    Timeout: 5 * time.Second,
+							  }).Dial,
+							  TLSHandshakeTimeout: 5 * time.Second,
+							}
+							
+							var c = &http.Client{
+							  Timeout: time.Second * 5,
+							  Transport: netTransport,
+							}
+														
+							r, err := http.NewRequest("POST", "http://localhost:60000/session_token", bytes.NewBuffer(updateSessionTokenData[:]))
+							if err != nil {
+							    fmt.Printf("failed to create post request for session %s: %v\n", core.IdString(sessionToken.SessionId[:]), err)
+							    return
+							}
+							response, err := c.Do(r)
+
+							if response == nil {
+								fmt.Printf("nil response\n")
+							} else {
+								fmt.Printf("response: %s, %v\n", response.Status, err)
+							}
+
+						}(sessionTokenDataCopy)
 					}
 
 					// forward payload packet to server

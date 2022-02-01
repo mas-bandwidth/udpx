@@ -34,11 +34,11 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
-	"net"
 	"time"
 
 	"github.com/networknext/udpx/modules/core"
@@ -109,7 +109,7 @@ func mainReturnWithCode() int {
 		router.HandleFunc("/health", healthHandler).Methods("GET")
 		router.HandleFunc("/status", statusHandler).Methods("GET")
 		router.HandleFunc("/connect_token", connectTokenHandler).Methods("GET")
-		router.HandleFunc("/session_token", sessionTokenHandler).Methods("GET")
+		router.HandleFunc("/session_token", sessionTokenHandler).Methods("POST")
 
 		httpPort := envvar.Get("HTTP_PORT", "60000")
 
@@ -129,7 +129,7 @@ func mainReturnWithCode() int {
 	}
 
 	// wait for shutdown
-	
+
 	termChan := make(chan os.Signal, 1)
 	signal.Notify(termChan, os.Interrupt, syscall.SIGTERM)
 	<-termChan
@@ -157,19 +157,19 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 func connectTokenHandler(w http.ResponseWriter, r *http.Request) {
 	var userId [core.UserIdBytes]byte // todo: read in the user id from octet-stream from POST?
 	connectToken := core.GenerateConnectToken(userId[:], GatewayAddress, GatewayPublicKey[:], AuthPrivateKey[:], GatewayPublicKey[:])
-	w.Header().Set("Content-Type", "application/octet-stream") 
+	w.Header().Set("Content-Type", "application/octet-stream")
 	w.WriteHeader(http.StatusOK)
 	w.Write(connectToken)
 }
 
 func sessionTokenHandler(w http.ResponseWriter, r *http.Request) {
-	
+
 	requestData, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		// todo: core debug
-		fmt.Printf("could not read request data: %v\n", err) 
-	    http.Error(w, err.Error(), http.StatusBadRequest)
-	    return
+		fmt.Printf("could not read request data: %v\n", err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
 	if len(requestData) != core.EncryptedSessionTokenBytes {
@@ -193,7 +193,7 @@ func sessionTokenHandler(w http.ResponseWriter, r *http.Request) {
 		// todo: core debug
 		fmt.Printf("session token has expired\n")
 		w.WriteHeader(http.StatusBadRequest)
-		return		
+		return
 	}
 
 	sessionToken.ExpireTimestamp += core.SessionTokenExtensionSeconds
@@ -204,7 +204,7 @@ func sessionTokenHandler(w http.ResponseWriter, r *http.Request) {
 
 	core.Info("updated session token %s", core.IdString(sessionToken.SessionId[:]))
 
-	w.Header().Set("Content-Type", "application/octet-stream") 
+	w.Header().Set("Content-Type", "application/octet-stream")
 	w.WriteHeader(http.StatusOK)
 	w.Write(responseData[:])
 }

@@ -1,92 +1,50 @@
 DONE
 
-	Sketch out the session token
+	Get the session token update request from teh gateway working.
 
-	Sketch out connect data
+	Right now it passes in the session token and the auth service just can't decrypt it.
 
-	Add tests for read and write session token, encrypt/decrypt etc.
-
-	Add tests for connect data
-
-	Write function to generate connect token, inputs are gateway address, gateway public key. generates random session id.
-
-	Create a tool to generate a connect token and print it out to stdout as base64
-
-	How to pass the connect token from the tool into dev-client when it runs?
-
-	Make shell command will do it.
-
-	Whoops, connect data also needs public/private keypair.
-
-	Can't just generate a random session id, it must be one half of a keypair, by design.
-
-	Client now has connect token passed in via env var.
-
-	Read in the env var, and then base64 decode and check the size of the byte array.
-
-	Client needs to read the gateway address, gateway public key and session id from the connect token passed in.
-
-	Client should extract and store the session token from the connect token.
-
-	Now the client should connect as usual...
-
-	Confirmed.
-
-	Extend core.go packet definition to include the session token in the prefix, after the chonkle.
-
-	Update client to include the session token in packets sent.
-
-	Update client to read the session token in packets received.
-
-	Update gateway to have session token in the payload packet on read and write.
-
-	Server does not need to see or know about the session token for now, keep it at the gateway level (like the chonkle).
-
-	Get the client and gateway working with the new packet structure first.
-
-	Right now, stuck on client not being able to decrypt payload packet. Something wrong there.
-
-	Client connects.
-
-	Gateway decrypts the session token
-
-	If the session token doesn't decrypt, drop the packet
-
-	If the session token has expired, drop the packet.
-
-	If the session token session id does not match the packet session id, drop the packet.
-
-	At this point the client should connect, have 20 seconds of grace, and then the gateway will drop all packets because the session token has expired.
-
-	Confirmed.
-
-	Implement a new backend service "auth". 
-
-	Its job is to generate connect tokens when asked for a given user id, and to extend session tokens while a session is connected.
-
-	Auth service needs to know the auth private key and the gateway private and public keys.
-
-	Implement an endpoint on auth to create a connect token "/connect_token".
-
-	Leave user id as zero for now.
-
-	Implement an endpoint on auth to extend a session token. 
-
-	Input is the current session token, uploaded as binary application/octet-stream on a POST
-
-	Output is the current session token, returned as binary application/octet-stream
+	It was because the session token data was modified in place on decryption. Fixed with a copy pre-decrypt.
 
 TODO
 
-	---------------
+	Now I need to get the response processed and handled in the goroutine. Stopping for now.
 
-	The gateway needs a goroutine per-session entry to update the session token. 
 
-	If the goroutine is nil, and <= 10 seconds remaining until expiry, create a goroutine that does the session extension.
 
-	Use a channel to get the updated token back... poll this channel non-blocking on packets received for that session.
 
-	Once the token comes back, copy it to the session entry, then send it back down to the client in the payload packets.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 	---------------
 

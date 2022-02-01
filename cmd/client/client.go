@@ -565,7 +565,7 @@ func mainReturnWithCode() int {
 
 						encryptedData := packetData[encryptedDataIndex:]
 
-						nonce := packetData[nonceIndex:nonceIndex+core.NonceBytes_Box]
+						nonce := packetData[nonceIndex : nonceIndex+core.NonceBytes_Box]
 
 						err = core.Decrypt_Box(gatewayPublicKey, clientPrivateKey, nonce, encryptedData, len(encryptedData)-core.PittleBytes)
 						if err != nil {
