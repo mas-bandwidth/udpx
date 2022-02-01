@@ -20,19 +20,11 @@ DONE
 
 	When the client detects that the session token has expired, the client times out and prints "disconnected" before exiting.
 
-TODO
-
-	---------------
-
 	Gateway needs some protection so it doesn't hammer auth for a connect token every packet received.
 
 	There needs to be an enforced delay between subsequent update token requests.
 
 	This can be added by putting in a "TokenUpdateCooldownTime", and putting it 1 sec in future, after each request comes back.
-
-	---------------
-
-	Check to see if we should be creating http transport instances in the goroutine, or having shared versions of that.
 
 	Reduce timeout to 1 sec.
 
@@ -42,8 +34,15 @@ TODO
 
 	Don't run auth, and verify that the retries kick in until session token times out.
 
-	---------------
+	Fixed various issues with retry.
 
+TODO
+	
+	Update soak test so auth is run in the background
+
+	Update soak test so clients get initial connect token
+
+	*** Done for today. ***
 
 
 

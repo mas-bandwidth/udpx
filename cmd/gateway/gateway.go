@@ -74,6 +74,7 @@ type SessionEntry struct {
 	SessionTokenExpireTimestamp uint64
 	SessionTokenSequence        uint64
 	SessionTokenCooldown		time.Time
+	SessionTokenRetryCount      int
 }
 
 func main() {
@@ -316,14 +317,12 @@ func mainReturnWithCode() int {
 					var sessionToken core.SessionToken
 					result := core.ReadEncryptedSessionToken(sessionTokenData, &index, &sessionToken, authPublicKey, gatewayPrivateKey)
 					if !result {
-						// todo: debug
-						core.Error("could not decrypt session token")
+						core.Debug("could not decrypt session token")
 						continue
 					}
 
 					if sessionToken.ExpireTimestamp < uint64(time.Now().Unix()) {
-						// todo: debug
-						core.Error("session token has expired")
+						core.Debug("session token has expired")
 						continue
 					}
 
@@ -335,8 +334,7 @@ func mainReturnWithCode() int {
 					copy(sessionId[:], senderPublicKey[:])
 
 					if !core.IdEqual(sessionToken.SessionId[:], sessionId[:]) {
-						// todo: debug
-						core.Error("session id mismatch")
+						core.Debug("session id mismatch")
 						continue
 					}
 
@@ -572,19 +570,23 @@ func mainReturnWithCode() int {
 
 						sessionEntry.UpdatingSessionToken = true
 
-						core.Debug("updating session token for %s", core.IdString(sessionToken.SessionId[:]))
-
+						if sessionEntry.SessionTokenRetryCount == 0 {
+							core.Debug("updating session token %s", core.IdString(sessionToken.SessionId[:]))
+						} else {
+							core.Debug("updating session token %s retry #%d", core.IdString(sessionToken.SessionId[:]), sessionEntry.SessionTokenRetryCount)
+						}
+						
 						go func(channel chan SessionTokenUpdate, inputSessionTokenData [core.EncryptedSessionTokenBytes]byte) {
 
 							var netTransport = &http.Transport{
 								Dial: (&net.Dialer{
-									Timeout: 5 * time.Second,
+									Timeout: time.Second,
 								}).Dial,
-								TLSHandshakeTimeout: 5 * time.Second,
+								TLSHandshakeTimeout: time.Second,
 							}
 
 							var c = &http.Client{
-								Timeout:   time.Second * 5,
+								Timeout:   time.Second,
 								Transport: netTransport,
 							}
 
@@ -647,8 +649,12 @@ func mainReturnWithCode() int {
 								copy(sessionEntry.SessionTokenData[:], update.SessionTokenData[:])
 								sessionEntry.SessionTokenExpireTimestamp = update.ExpireTimestamp
 								sessionEntry.SessionTokenSequence++
+								sessionEntry.SessionTokenRetryCount = 0
+								core.Info("updated session token for session %s %d", core.IdString(sessionId[:]), sessionEntry.SessionTokenSequence)
+							} else {
+								core.Debug("failed to update session token %s :(", core.IdString(sessionId[:]))
+								sessionEntry.SessionTokenRetryCount++
 								sessionEntry.SessionTokenCooldown = time.Now().Add(time.Second)
-								core.Info("updated session token for %s %d", core.IdString(sessionId[:]), sessionEntry.SessionTokenSequence)
 							}
 							sessionEntry.UpdatingSessionToken = false
 						default:
