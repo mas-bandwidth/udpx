@@ -52,7 +52,7 @@ build-keygen: dist
 	@printf "done\n"
 
 .PHONY: build-soak
-build-soak: dist build-client build-server build-gateway
+build-soak: dist
 	@printf "Building soak... "
 	@$(GO) build -o ${DIST_DIR}/soak ./cmd/soak/soak.go
 	@printf "done\n"
@@ -81,8 +81,8 @@ connect-token: build-connect-token ## generate connect token
 keygen: build-keygen ## generate keypair
 	./dist/keygen
 
-.PHONY: soak test
-soak: build-soak ## run soak test
+.PHONY: soak
+soak: build-soak build-client build-server build-gateway build-auth build-connect-token ## run soak test
 	./dist/soak
 
 .PHONY: test

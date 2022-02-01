@@ -36,38 +36,13 @@ DONE
 
 	Fixed various issues with retry.
 
-TODO
-	
 	Update soak test so auth is run in the background
 
-	Update soak test so clients get initial connect token
+	Update soak test so clients get initial connect tokens
 
-	*** Done for today. ***
+TODO
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	---------------
+	---------------	
 
 	Extend the connect data and session token to include the up/down bandwidth envelope in kbps.
 

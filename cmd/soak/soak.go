@@ -41,30 +41,49 @@ const (
 	clientBin  = "./dist/client"
 	gatewayBin = "./dist/gateway"
 	serverBin  = "./dist/server"
+	authBin = "./dist/auth"
+	connectTokenBin = "./dist/connect_token"
 )
 
 func client(port uint16) *exec.Cmd {
 
-	// todo: we need to get a connect token for ecah client so they can connect
+	// get connect token
 
-	cmd := exec.Command(clientBin)
-	if cmd == nil {
-		panic("could not create client!\n")
+	connect_token_cmd := exec.Command(connectTokenBin)
+    if connect_token_cmd == nil {
+        panic("could not exec connect token")
+    }
+
+	connect_token_cmd.Env = os.Environ()
+	connect_token_cmd.Env = append(connect_token_cmd.Env, "GATEWAY_ADDRESS=127.0.0.1:40000")
+	connect_token_cmd.Env = append(connect_token_cmd.Env, "GATEWAY_PUBLIC_KEY=vnIjsJWZzgq+nS9t3KU7ch5BFhgDkm2U2bm7/2W6eRs=")
+	connect_token_cmd.Env = append(connect_token_cmd.Env, "GATEWAY_PRIVATE_KEY=qmnxBZs2UElVT4SXCdDuX4td+qtPkuXLL5VdOE0vvcA=")
+	connect_token_cmd.Env = append(connect_token_cmd.Env, "AUTH_PRIVATE_KEY=VmmdIRwxUb7vmzupzHbBHqJF3WPpLrp0Y0EzepAzny0=")
+	
+	connectToken, err := connect_token_cmd.Output()
+	if err != nil {
+		panic("could not get connect token output")
+	}
+
+    // run client
+
+	client_cmd := exec.Command(clientBin)
+	if client_cmd == nil {
+		panic("could not exec client!\n")
 		return nil
 	}
 
-	cmd.Env = os.Environ()
-	cmd.Env = append(cmd.Env, fmt.Sprintf("UDP_PORT=%d", port))
-	cmd.Env = append(cmd.Env, fmt.Sprintf("CLIENT_ADDRESS=127.0.0.1:%d", port))
-	cmd.Env = append(cmd.Env, "GATEWAY_ADDRESS=127.0.0.1:40000")
-	cmd.Env = append(cmd.Env, "GATEWAY_PUBLIC_KEY=vnIjsJWZzgq+nS9t3KU7ch5BFhgDkm2U2bm7/2W6eRs=")
+	client_cmd.Env = os.Environ()
+	client_cmd.Env = append(client_cmd.Env, fmt.Sprintf("CONNECT_TOKEN=%s", connectToken))
+	client_cmd.Env = append(client_cmd.Env, fmt.Sprintf("UDP_PORT=%d", port))
+	client_cmd.Env = append(client_cmd.Env, fmt.Sprintf("CLIENT_ADDRESS=127.0.0.1:%d", port))
 
-	// cmd.Stdout = os.Stdout
-	// cmd.Stderr = os.Stderr
+	// client_cmd.Stdout = os.Stdout
+	// client_cmd.Stderr = os.Stderr
 
-	cmd.Start()
+	client_cmd.Start()
 
-	return cmd
+	return client_cmd
 }
 
 func gateway() *exec.Cmd {
@@ -81,6 +100,7 @@ func gateway() *exec.Cmd {
 	cmd.Env = append(cmd.Env, "GATEWAY_ADDRESS=127.0.0.1:40000")
 	cmd.Env = append(cmd.Env, "GATEWAY_INTERNAL_ADDRESS=127.0.0.1:40001")
 	cmd.Env = append(cmd.Env, "GATEWAY_PRIVATE_KEY=qmnxBZs2UElVT4SXCdDuX4td+qtPkuXLL5VdOE0vvcA=")
+	cmd.Env = append(cmd.Env, "AUTH_PUBLIC_KEY=i9XuIDN5ePgWiRGZZoxNKjQv3ZC9JAfMjXGTIr4peQM=")
 	cmd.Env = append(cmd.Env, "SERVER_ADDRESS=127.0.0.1:50000")
 
 	// cmd.Stdout = os.Stdout
@@ -105,19 +125,46 @@ func server() *exec.Cmd {
 	return cmd
 }
 
+func auth() *exec.Cmd {
+
+	cmd := exec.Command(authBin)
+
+	if cmd == nil {
+		panic("could not create auth!\n")
+		return nil
+	}
+
+	cmd.Env = append(cmd.Env, "HTTP_PORT=60000")
+	cmd.Env = append(cmd.Env, "GATEWAY_ADDRESS=127.0.0.1:40000")
+	cmd.Env = append(cmd.Env, "GATEWAY_PUBLIC_KEY=vnIjsJWZzgq+nS9t3KU7ch5BFhgDkm2U2bm7/2W6eRs=")
+	cmd.Env = append(cmd.Env, "GATEWAY_PRIVATE_KEY=qmnxBZs2UElVT4SXCdDuX4td+qtPkuXLL5VdOE0vvcA=")
+	cmd.Env = append(cmd.Env, "AUTH_PUBLIC_KEY=i9XuIDN5ePgWiRGZZoxNKjQv3ZC9JAfMjXGTIr4peQM=")
+	cmd.Env = append(cmd.Env, "AUTH_PRIVATE_KEY=VmmdIRwxUb7vmzupzHbBHqJF3WPpLrp0Y0EzepAzny0=")
+
+	// cmd.Stdout = os.Stdout
+	// cmd.Stderr = os.Stderr
+
+	cmd.Start()
+
+	return cmd
+}
+
 func soak() {
 
 	const NumClients = 10
 
+	auth_cmd := auth()
+	server_cmd := server()
+	gateway_cmd := gateway()
 	client_cmd := make([]*exec.Cmd, NumClients)
 	for i := 0; i < NumClients; i++ {
 		client_cmd[i] = client(uint16(30000 + i))
 	}
 
-	gateway_cmd := gateway()
-	server_cmd := server()
-
 	server_cmd.Wait()
+
+	auth_cmd.Process.Signal(os.Interrupt)
+	auth_cmd.Wait()
 
 	gateway_cmd.Process.Signal(os.Interrupt)
 	gateway_cmd.Wait()
