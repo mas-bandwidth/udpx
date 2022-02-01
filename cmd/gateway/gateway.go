@@ -36,6 +36,7 @@ package main
 import "C"
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io/ioutil"
@@ -46,7 +47,6 @@ import (
 	"sync"
 	"syscall"
 	"time"
-	"bytes"
 
 	"github.com/networknext/udpx/modules/core"
 	"github.com/networknext/udpx/modules/envvar"
@@ -60,12 +60,18 @@ const SessionMapSwapTime = 60
 const ChallengeTokenTimeout = 10
 const OldSequenceThreshold = 100
 
+type SessionTokenUpdate struct {
+	SessionTokenData []byte
+	ExpireTimestamp  uint64
+}
+
 type SessionEntry struct {
-	ReceivedSequence     uint64
-	ReceivedPackets      [OldSequenceThreshold]uint64
-	UpdatingSessionToken bool
-	SessionTokenChannel  chan []byte
-	SessionTokenData     [core.EncryptedSessionTokenBytes]byte
+	ReceivedSequence            uint64
+	ReceivedPackets             [OldSequenceThreshold]uint64
+	UpdatingSessionToken        bool
+	SessionTokenChannel         chan SessionTokenUpdate
+	SessionTokenData            [core.EncryptedSessionTokenBytes]byte
+	SessionTokenExpireTimestamp uint64
 }
 
 func main() {
@@ -303,12 +309,14 @@ func mainReturnWithCode() int {
 					var sessionToken core.SessionToken
 					result := core.ReadEncryptedSessionToken(sessionTokenData, &index, &sessionToken, authPublicKey, gatewayPrivateKey)
 					if !result {
-						core.Debug("could not decrypt session token")
+						// todo: debug
+						core.Error("could not decrypt session token")
 						continue
 					}
 
 					if sessionToken.ExpireTimestamp < uint64(time.Now().Unix()) {
-						core.Debug("session token has expired")
+						// todo: debug
+						core.Error("session token has expired")
 						continue
 					}
 
@@ -320,7 +328,8 @@ func mainReturnWithCode() int {
 					copy(sessionId[:], senderPublicKey[:])
 
 					if !core.IdEqual(sessionToken.SessionId[:], sessionId[:]) {
-						core.Debug("session id mismatch")
+						// todo: debug
+						core.Error("session id mismatch")
 						continue
 					}
 
@@ -435,8 +444,9 @@ func mainReturnWithCode() int {
 							}
 
 							sessionEntry := &SessionEntry{ReceivedSequence: challengeToken.Sequence}
-							sessionEntry.SessionTokenChannel = make(chan []byte, 1)
+							sessionEntry.SessionTokenChannel = make(chan SessionTokenUpdate, 1)
 							copy(sessionEntry.SessionTokenData[:], sessionTokenDataCopy[:])
+							sessionEntry.SessionTokenExpireTimestamp = sessionToken.ExpireTimestamp
 							sessionMap_New[sessionId] = sessionEntry
 
 							core.Info("new session %s from %s", core.IdString(sessionId[:]), from.String())
@@ -548,80 +558,85 @@ func mainReturnWithCode() int {
 
 					// update session token
 
-					if sessionToken.ExpireTimestamp - uint64(10) <= uint64(time.Now().Unix()) && !sessionEntry.UpdatingSessionToken {
+					if sessionEntry.SessionTokenExpireTimestamp-uint64(10) <= uint64(time.Now().Unix()) && !sessionEntry.UpdatingSessionToken {
 
 						sessionEntry.UpdatingSessionToken = true
 
 						core.Debug("updating session token for session %s", core.IdString(sessionToken.SessionId[:]))
 
-						go func(channel chan[]byte, inputSessionTokenData [core.EncryptedSessionTokenBytes]byte) {
+						go func(channel chan SessionTokenUpdate, inputSessionTokenData [core.EncryptedSessionTokenBytes]byte) {
 
 							var netTransport = &http.Transport{
-							  Dial: (&net.Dialer{
-							    Timeout: 5 * time.Second,
-							  }).Dial,
-							  TLSHandshakeTimeout: 5 * time.Second,
+								Dial: (&net.Dialer{
+									Timeout: 5 * time.Second,
+								}).Dial,
+								TLSHandshakeTimeout: 5 * time.Second,
 							}
-							
+
 							var c = &http.Client{
-							  Timeout: time.Second * 5,
-							  Transport: netTransport,
+								Timeout:   time.Second * 5,
+								Transport: netTransport,
 							}
-														
+
 							r, err := http.NewRequest("POST", "http://localhost:60000/session_token", bytes.NewBuffer(inputSessionTokenData[:]))
 							if err != nil {
-							    core.Debug("failed to create post request: %v", err)
-							    channel <- make([]byte, 0)
-							    return
+								core.Debug("failed to create post request: %v", err)
+								channel <- SessionTokenUpdate{}
+								return
 							}
 							response, err := c.Do(r)
 
 							if response == nil {
 								core.Debug("nil response from post")
-							    channel <- make([]byte, 0)
+								channel <- SessionTokenUpdate{}
 								return
 							}
 
 							defer response.Body.Close()
-							   
+
 							if err != nil {
 								core.Debug("error on post request: %s", err)
-							    channel <- make([]byte, 0)
+								channel <- SessionTokenUpdate{}
 								return
 							}
 
 							responseData, err := ioutil.ReadAll(response.Body)
 							if err != nil {
 								core.Debug("error reading response data: %v")
-							    channel <- make([]byte, 0)
+								channel <- SessionTokenUpdate{}
 								return
 							}
 
 							if len(responseData) != core.EncryptedSessionTokenBytes {
 								core.Debug("bad response size: %d", len(responseData))
-							    channel <- make([]byte, 0)
+								channel <- SessionTokenUpdate{}
 								return
 							}
+
+							sessionTokenData := make([]byte, core.EncryptedSessionTokenBytes)
+							copy(sessionTokenData[:], responseData[:])
 
 							index := 0
-							var tempSessionToken core.SessionToken
-							result := core.ReadEncryptedSessionToken(responseData[:], &index, &tempSessionToken, authPublicKey[:], gatewayPrivateKey[:])
+							var sessionToken core.SessionToken
+							result := core.ReadEncryptedSessionToken(responseData[:], &index, &sessionToken, authPublicKey[:], gatewayPrivateKey[:])
 							if !result {
 								core.Debug("invalid session token")
-							    channel <- make([]byte, 0)
+								channel <- SessionTokenUpdate{}
 								return
 							}
 
-						    channel <- responseData
+							channel <- SessionTokenUpdate{SessionTokenData: sessionTokenData, ExpireTimestamp: sessionToken.ExpireTimestamp}
 
 						}(sessionEntry.SessionTokenChannel, sessionTokenDataCopy)
 					}
 
 					if sessionEntry.UpdatingSessionToken {
 						select {
-						case sessionToken := <-sessionEntry.SessionTokenChannel:
-							if len(sessionToken) != 0 {
+						case update := <-sessionEntry.SessionTokenChannel:
+							if len(update.SessionTokenData) != 0 {
 								core.Info("updated session token for session %s", core.IdString(sessionId[:]))
+								copy(sessionEntry.SessionTokenData[:], update.SessionTokenData[:])
+								sessionEntry.SessionTokenExpireTimestamp = update.ExpireTimestamp
 							}
 							sessionEntry.UpdatingSessionToken = false
 						default:
@@ -726,8 +741,8 @@ func mainReturnWithCode() int {
 
 					core.Debug("recv internal %d byte packet from %s", packetBytes, from.String())
 
-					// todo: it's actually much larger than this that is the minimum...
-					if packetBytes <= core.PacketTypeBytes + core.VersionBytes + core.AddressBytes {
+					// todo: it's actually much larger than this that is the minimum, put this somewhere in core.go
+					if packetBytes <= core.PacketTypeBytes+core.VersionBytes+core.AddressBytes {
 						core.Debug("internal packet is too small")
 						continue
 					}
@@ -750,7 +765,7 @@ func mainReturnWithCode() int {
 
 					// grab the session token
 
-					sessionTokenData := packetData[index:index+core.EncryptedSessionTokenBytes]
+					sessionTokenData := packetData[index : index+core.EncryptedSessionTokenBytes]
 
 					// split the packet apart into sections
 

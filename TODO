@@ -28,21 +28,17 @@ DONE
 
 	Verify the client maintains connection now, past the initial 20 seconds, and updates the session token every 10 secs.
 
-TODO
-
 	The gateway needs to check session token expiry itself via its own session token expire time, updated when a new session token is updated.
 
 	Right now it is just repeatedly requesting a new session token, because the client is still sending up the old session token.
 
+TODO
 
+	---------------
 
+	Add a mutex to protect the session token on the client. We can't write to and read from it from different threads.
 
-
-
-
-
-
-	-------------
+	---------------
 
 	Now the client should only update the session token if it is newer.
 
@@ -54,60 +50,51 @@ TODO
 
 	When the client detects that the session token has expired, the client times out and prints "disconnected" before exiting.
 
-	-------------
+	---------------
 
+	Gateway needs some protection so it doesn't hammer auth for a connect token every packet received.
 
+	There needs to be an enforced delay between subsequent update token requests.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+	This can be added by putting in a "TokenUpdateCooldownTime", and putting it 1 sec in future, after each request comes back.
 
 	---------------
 
-	Extend the packet structure to have a session token sequence number (uint64) before the session token.
+	Check to see if we should be creating http transport instances in the goroutine, or having shared versions of that.
 
-	On the gateway, increase the session token sequence each time the session token is updated on the gateway.
+	Reduce timeout to 1 sec.
+
+	Verify that retries happen.
+
+	Track the retries, and print them out numbered.
+
+	Don't run auth, and verify that the retries kick in once per-second until session token times out.
 
 	---------------
 
-	On the client, if the session token in received has a more recent sequence number than the current session token, update the stored session token and sequence number.
 
-	On the client, if the session token is more than 20 seconds old, expire the session token and time out the client (quit).
 
-	---------------
 
-	At this point we should have a system where connect tokens are the only way to connect to the server, and the sessions may only stay active as long as the session manager continues to renew them.
 
-	Pretty badass.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 	---------------
 

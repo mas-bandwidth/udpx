@@ -459,7 +459,8 @@ func mainReturnWithCode() int {
 						// HACK HACK HACK
 						// update the client's session token whenever a payload packet is received
 						sessionTokenDataIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes
-						packetSessionTokenData := packetData[sessionTokenDataIndex:sessionTokenDataIndex+core.EncryptedSessionTokenBytes]
+						packetSessionTokenData := packetData[sessionTokenDataIndex : sessionTokenDataIndex+core.EncryptedSessionTokenBytes]
+						sessionTokenData = make([]byte, core.EncryptedSessionTokenBytes)
 						copy(sessionTokenData[:], packetSessionTokenData[:])
 
 						// ---------------------------------

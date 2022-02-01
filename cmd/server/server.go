@@ -239,7 +239,7 @@ func mainReturnWithCode() int {
 
 				core.ReadAddress(packetData, &index, &gatewayInternalAddress)
 				core.ReadAddress(packetData, &index, &clientAddress)
-				sessionTokenData := packetData[index:index+core.EncryptedSessionTokenBytes]
+				sessionTokenData := packetData[index : index+core.EncryptedSessionTokenBytes]
 				index += core.EncryptedSessionTokenBytes
 				core.ReadBytes(packetData, &index, sessionId[:], core.SessionIdBytes)
 				core.ReadUint64(packetData, &index, &sequence)
