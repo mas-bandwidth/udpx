@@ -73,6 +73,7 @@ type SessionEntry struct {
 	SessionTokenData            [core.EncryptedSessionTokenBytes]byte
 	SessionTokenExpireTimestamp uint64
 	SessionTokenSequence        uint64
+	SessionTokenCooldown		time.Time
 }
 
 func main() {
@@ -567,7 +568,7 @@ func mainReturnWithCode() int {
 
 					// update session token
 
-					if sessionEntry.SessionTokenExpireTimestamp-uint64(10) <= uint64(time.Now().Unix()) && !sessionEntry.UpdatingSessionToken {
+					if sessionEntry.SessionTokenExpireTimestamp-uint64(10) <= uint64(time.Now().Unix()) && !sessionEntry.UpdatingSessionToken && sessionEntry.SessionTokenCooldown.Before(time.Now()) {
 
 						sessionEntry.UpdatingSessionToken = true
 
@@ -646,6 +647,7 @@ func mainReturnWithCode() int {
 								copy(sessionEntry.SessionTokenData[:], update.SessionTokenData[:])
 								sessionEntry.SessionTokenExpireTimestamp = update.ExpireTimestamp
 								sessionEntry.SessionTokenSequence++
+								sessionEntry.SessionTokenCooldown = time.Now().Add(time.Second)
 								core.Info("updated session token for %s %d", core.IdString(sessionId[:]), sessionEntry.SessionTokenSequence)
 							}
 							sessionEntry.UpdatingSessionToken = false
