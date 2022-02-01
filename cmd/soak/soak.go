@@ -38,10 +38,10 @@ import (
 )
 
 const (
-	clientBin  = "./dist/client"
-	gatewayBin = "./dist/gateway"
-	serverBin  = "./dist/server"
-	authBin = "./dist/auth"
+	clientBin       = "./dist/client"
+	gatewayBin      = "./dist/gateway"
+	serverBin       = "./dist/server"
+	authBin         = "./dist/auth"
 	connectTokenBin = "./dist/connect_token"
 )
 
@@ -50,22 +50,22 @@ func client(port uint16) *exec.Cmd {
 	// get connect token
 
 	connect_token_cmd := exec.Command(connectTokenBin)
-    if connect_token_cmd == nil {
-        panic("could not exec connect token")
-    }
+	if connect_token_cmd == nil {
+		panic("could not exec connect token")
+	}
 
 	connect_token_cmd.Env = os.Environ()
 	connect_token_cmd.Env = append(connect_token_cmd.Env, "GATEWAY_ADDRESS=127.0.0.1:40000")
 	connect_token_cmd.Env = append(connect_token_cmd.Env, "GATEWAY_PUBLIC_KEY=vnIjsJWZzgq+nS9t3KU7ch5BFhgDkm2U2bm7/2W6eRs=")
 	connect_token_cmd.Env = append(connect_token_cmd.Env, "GATEWAY_PRIVATE_KEY=qmnxBZs2UElVT4SXCdDuX4td+qtPkuXLL5VdOE0vvcA=")
 	connect_token_cmd.Env = append(connect_token_cmd.Env, "AUTH_PRIVATE_KEY=VmmdIRwxUb7vmzupzHbBHqJF3WPpLrp0Y0EzepAzny0=")
-	
+
 	connectToken, err := connect_token_cmd.Output()
 	if err != nil {
 		panic("could not get connect token output")
 	}
 
-    // run client
+	// run client
 
 	client_cmd := exec.Command(clientBin)
 	if client_cmd == nil {

@@ -73,7 +73,7 @@ type SessionEntry struct {
 	SessionTokenData            [core.EncryptedSessionTokenBytes]byte
 	SessionTokenExpireTimestamp uint64
 	SessionTokenSequence        uint64
-	SessionTokenCooldown		time.Time
+	SessionTokenCooldown        time.Time
 	SessionTokenRetryCount      int
 }
 
@@ -575,7 +575,7 @@ func mainReturnWithCode() int {
 						} else {
 							core.Debug("updating session token %s retry #%d", core.IdString(sessionToken.SessionId[:]), sessionEntry.SessionTokenRetryCount)
 						}
-						
+
 						go func(channel chan SessionTokenUpdate, inputSessionTokenData [core.EncryptedSessionTokenBytes]byte) {
 
 							var netTransport = &http.Transport{
@@ -760,7 +760,7 @@ func mainReturnWithCode() int {
 
 					core.Debug("recv internal %d byte packet from %s", packetBytes, from.String())
 
-					if packetBytes < core.PacketTypeBytes + core.VersionBytes + core.AddressBytes + core.EncryptedSessionTokenBytes + core.SequenceBytes + core.HeaderBytes + core.MinPayloadBytes {
+					if packetBytes < core.PacketTypeBytes+core.VersionBytes+core.AddressBytes+core.EncryptedSessionTokenBytes+core.SequenceBytes+core.HeaderBytes+core.MinPayloadBytes {
 						core.Debug("internal packet is too small")
 						continue
 					}
@@ -788,7 +788,7 @@ func mainReturnWithCode() int {
 
 					// grab the session token sequence
 
-					sessionTokenSequence := packetData[index:index+core.SequenceBytes]
+					sessionTokenSequence := packetData[index : index+core.SequenceBytes]
 					index += core.SequenceBytes
 
 					// split the packet apart into sections

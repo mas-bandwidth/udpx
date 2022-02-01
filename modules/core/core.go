@@ -90,6 +90,13 @@ const ChallengePacketBytes = PrefixBytes + NonceBytes_Box + EncryptedChallengeTo
 const ConnectTokenExpireSeconds = 20
 const SessionTokenExtensionSeconds = 10
 
+const EnvelopeBytes = 8
+
+const SessionTokenBytes = 8 + SessionIdBytes + UserIdBytes + EnvelopeBytes
+const EncryptedSessionTokenBytes = NonceBytes_SecretBox + SessionTokenBytes + HMACBytes_SecretBox
+
+const ConnectDataBytes = PublicKeyBytes_Box + PrivateKeyBytes_Box + AddressBytes + PublicKeyBytes_Box + EnvelopeBytes
+
 func Keygen_Box() ([]byte, []byte) {
 	var publicKey [PublicKeyBytes_Box]byte
 	var privateKey [PrivateKeyBytes_Box]byte
@@ -706,18 +713,19 @@ func ProcessAcks(ackSequence uint64, ack_bits []byte, ackedPackets []uint64, ack
 }
 
 type SessionToken struct {
-	ExpireTimestamp uint64
-	SessionId       [SessionIdBytes]byte
-	UserId          [UserIdBytes]byte
+	ExpireTimestamp  uint64
+	SessionId        [SessionIdBytes]byte
+	UserId           [UserIdBytes]byte
+	EnvelopeUpKbps   uint32
+	EnvelopeDownKbps uint32
 }
-
-const SessionTokenBytes = 8 + SessionIdBytes + UserIdBytes
-const EncryptedSessionTokenBytes = NonceBytes_SecretBox + SessionTokenBytes + HMACBytes_SecretBox
 
 func WriteSessionToken(buffer []byte, index *int, token *SessionToken) {
 	WriteUint64(buffer, index, token.ExpireTimestamp)
 	WriteBytes(buffer, index, token.SessionId[:], SessionIdBytes)
 	WriteBytes(buffer, index, token.UserId[:], UserIdBytes)
+	WriteUint32(buffer, index, token.EnvelopeUpKbps)
+	WriteUint32(buffer, index, token.EnvelopeDownKbps)
 }
 
 func ReadSessionToken(buffer []byte, index *int, token *SessionToken) bool {
@@ -727,6 +735,8 @@ func ReadSessionToken(buffer []byte, index *int, token *SessionToken) bool {
 	ReadUint64(buffer, index, &token.ExpireTimestamp)
 	ReadBytes(buffer, index, token.SessionId[:], SessionIdBytes)
 	ReadBytes(buffer, index, token.UserId[:], UserIdBytes)
+	ReadUint32(buffer, index, &token.EnvelopeUpKbps)
+	ReadUint32(buffer, index, &token.EnvelopeDownKbps)
 	return true
 }
 
@@ -761,15 +771,17 @@ type ConnectData struct {
 	ClientPrivateKey [PrivateKeyBytes_Box]byte
 	GatewayAddress   net.UDPAddr
 	GatewayPublicKey [PublicKeyBytes_Box]byte
+	EnvelopeUpKbps   uint32
+	EnvelopeDownKbps uint32
 }
-
-const ConnectDataBytes = PublicKeyBytes_Box + PrivateKeyBytes_Box + AddressBytes + PublicKeyBytes_Box
 
 func WriteConnectData(buffer []byte, index *int, connectData *ConnectData) {
 	WriteBytes(buffer, index, connectData.ClientPublicKey[:], PublicKeyBytes_Box)
 	WriteBytes(buffer, index, connectData.ClientPrivateKey[:], PrivateKeyBytes_Box)
 	WriteAddress(buffer, index, &connectData.GatewayAddress)
 	WriteBytes(buffer, index, connectData.GatewayPublicKey[:], UserIdBytes)
+	WriteUint32(buffer, index, connectData.EnvelopeUpKbps)
+	WriteUint32(buffer, index, connectData.EnvelopeDownKbps)
 }
 
 func ReadConnectData(buffer []byte, index *int, connectData *ConnectData) bool {
@@ -780,12 +792,18 @@ func ReadConnectData(buffer []byte, index *int, connectData *ConnectData) bool {
 	ReadBytes(buffer, index, connectData.ClientPrivateKey[:], PrivateKeyBytes_Box)
 	ReadAddress(buffer, index, &connectData.GatewayAddress)
 	ReadBytes(buffer, index, connectData.GatewayPublicKey[:], PublicKeyBytes_Box)
+	ReadUint32(buffer, index, &connectData.EnvelopeUpKbps)
+	ReadUint32(buffer, index, &connectData.EnvelopeDownKbps)
 	return true
 }
 
 const ConnectTokenBytes = ConnectDataBytes + EncryptedSessionTokenBytes
 
 func GenerateConnectToken(userId []byte, gatewayAddress *net.UDPAddr, gatewayPublicKey []byte, senderPrivateKey []byte, receiverPublicKey []byte) []byte {
+
+	// todo: need to pass in envelopeUp, envelopeDown
+	envelopeUpKbps := uint32(2500)
+	envelopeDownKbps := uint32(10000)
 
 	publicKey, privateKey := Keygen_Box()
 
@@ -794,6 +812,8 @@ func GenerateConnectToken(userId []byte, gatewayAddress *net.UDPAddr, gatewayPub
 	copy(connectData.ClientPrivateKey[:], privateKey[:])
 	connectData.GatewayAddress = *gatewayAddress
 	copy(connectData.GatewayPublicKey[:], gatewayPublicKey[:])
+	connectData.EnvelopeUpKbps = envelopeUpKbps
+	connectData.EnvelopeDownKbps = envelopeDownKbps
 
 	sessionToken := SessionToken{}
 	sessionToken.ExpireTimestamp = uint64(time.Now().Unix()) + ConnectTokenExpireSeconds

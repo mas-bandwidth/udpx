@@ -38,9 +38,9 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
-	"sync"
 
 	"github.com/networknext/udpx/modules/core"
 	"github.com/networknext/udpx/modules/envvar"
@@ -472,7 +472,7 @@ func mainReturnWithCode() int {
 
 						sessionTokenDataIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes
 						sessionTokenSequenceIndex := sessionTokenDataIndex + core.EncryptedSessionTokenBytes
-						
+
 						packetSessionTokenData := packetData[sessionTokenDataIndex : sessionTokenDataIndex+core.EncryptedSessionTokenBytes]
 
 						sessionTokenMutex.Lock()
@@ -487,7 +487,7 @@ func mainReturnWithCode() int {
 							sessionTokenSequence = packetSessionTokenSequence
 							sessionTokenExpireTime = time.Now().Add(time.Second * core.ConnectTokenExpireSeconds)
 						}
-	
+
 						sessionTokenMutex.Unlock()
 
 						// process payload packet
@@ -576,7 +576,7 @@ func mainReturnWithCode() int {
 						packetServerId := packetData[serverIdIndex : serverIdIndex+core.ServerIdBytes]
 
 						serverIdMutex.Lock()
-						newServer := !core.IdEqual(packetServerId, serverId[:]) 
+						newServer := !core.IdEqual(packetServerId, serverId[:])
 						if newServer {
 							core.Info("connected to server %s", core.IdString(packetServerId))
 							copy(serverId[:], packetServerId[:])

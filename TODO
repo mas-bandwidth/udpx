@@ -1,45 +1,5 @@
 DONE
 
-	Add a mutex to protect the session token on the client. We can't write to and read from it from different threads.
-
-	Add mutex on client around gateway id
-
-	Add mutex on client around server id
-
-	Now the client should only update the session token if it is newer.
-
-	To establish newness, we need a 64bit sequence number riding along with each session token.
-
-	When a new session token comes along, the client updates to it, and updates its own session token sequence.
-
-	Verify client gets in a steady state updating session tokens and prints out correct session token sequence every ~10 secs.
-
-	Extend auth to not update session tokens unless they are close to expiring (within session token extension time of expire). This way you can't repeatedly hammer to extend +10 whenever you want, you can only actually get an extension in real time.
-
-	The client also sets an expire time for the session token at initially 20 seconds (connect), and then subsequently 10 seconds after each session token update.
-
-	When the client detects that the session token has expired, the client times out and prints "disconnected" before exiting.
-
-	Gateway needs some protection so it doesn't hammer auth for a connect token every packet received.
-
-	There needs to be an enforced delay between subsequent update token requests.
-
-	This can be added by putting in a "TokenUpdateCooldownTime", and putting it 1 sec in future, after each request comes back.
-
-	Reduce timeout to 1 sec.
-
-	Verify that retries happen when auth is down.
-
-	Track the retries, and print them out numbered.
-
-	Don't run auth, and verify that the retries kick in until session token times out.
-
-	Fixed various issues with retry.
-
-	Update soak test so auth is run in the background
-
-	Update soak test so clients get initial connect tokens
-
 TODO
 
 	---------------	

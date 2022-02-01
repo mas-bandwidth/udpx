@@ -372,6 +372,8 @@ func TestSessionToken(t *testing.T) {
 	sessionToken.ExpireTimestamp = uint64(time.Now().Unix() + 20)
 	RandomBytes_InPlace(sessionToken.SessionId[:])
 	RandomBytes_InPlace(sessionToken.UserId[:])
+	sessionToken.EnvelopeUpKbps = 2500
+	sessionToken.EnvelopeDownKbps = 10000
 
 	// write the session token to a buffer and read it back in
 
