@@ -72,6 +72,7 @@ type SessionEntry struct {
 	SessionTokenChannel         chan SessionTokenUpdate
 	SessionTokenData            [core.EncryptedSessionTokenBytes]byte
 	SessionTokenExpireTimestamp uint64
+	SessionTokenSequence        uint64
 }
 
 func main() {
@@ -294,7 +295,7 @@ func mainReturnWithCode() int {
 						continue
 					}
 
-					// before we decrypt the session token, save a copy so we can use it later
+					// before we decrypt the session token in place, save a copy of the encrypted data
 
 					sessionTokenIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes
 					sessionTokenData := packetData[sessionTokenIndex : sessionTokenIndex+core.EncryptedSessionTokenBytes]
@@ -303,9 +304,14 @@ func mainReturnWithCode() int {
 
 					copy(sessionTokenDataCopy[:], sessionTokenData[:])
 
+					sessionTokenSequenceIndex := sessionTokenIndex + core.EncryptedSessionTokenBytes
+					index := sessionTokenSequenceIndex
+					sessionTokenSequence := uint64(0)
+					core.ReadUint64(packetData, &index, &sessionTokenSequence)
+
 					// verify session token
 
-					index := 0
+					index = 0
 					var sessionToken core.SessionToken
 					result := core.ReadEncryptedSessionToken(sessionTokenData, &index, &sessionToken, authPublicKey, gatewayPrivateKey)
 					if !result {
@@ -336,7 +342,7 @@ func mainReturnWithCode() int {
 					// decrypt packet
 
 					sequenceIndex := sessionIdIndex + core.SessionIdBytes
-					encryptedDataIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes + core.EncryptedSessionTokenBytes + core.SessionIdBytes + core.SequenceBytes
+					encryptedDataIndex := core.PrefixBytes + core.SessionIdBytes + core.SequenceBytes
 
 					sequenceData := packetData[sequenceIndex : sequenceIndex+core.SequenceBytes]
 					encryptedData := packetData[encryptedDataIndex : packetBytes-core.PittleBytes]
@@ -447,6 +453,7 @@ func mainReturnWithCode() int {
 							sessionEntry.SessionTokenChannel = make(chan SessionTokenUpdate, 1)
 							copy(sessionEntry.SessionTokenData[:], sessionTokenDataCopy[:])
 							sessionEntry.SessionTokenExpireTimestamp = sessionToken.ExpireTimestamp
+							sessionEntry.SessionTokenSequence = sessionTokenSequence
 							sessionMap_New[sessionId] = sessionEntry
 
 							core.Info("new session %s from %s", core.IdString(sessionId[:]), from.String())
@@ -470,6 +477,7 @@ func mainReturnWithCode() int {
 							index := 0
 
 							dummySessionToken := [core.EncryptedSessionTokenBytes]byte{}
+							dummySessionTokenSequence := uint64(0)
 
 							version := byte(0)
 							core.WriteUint8(challengePacketData, &index, version)
@@ -477,6 +485,7 @@ func mainReturnWithCode() int {
 							chonkle := challengePacketData[index : index+core.ChonkleBytes]
 							index += core.ChonkleBytes
 							core.WriteBytes(challengePacketData, &index, dummySessionToken[:], core.EncryptedSessionTokenBytes)
+							core.WriteUint64(challengePacketData, &index, dummySessionTokenSequence)
 							core.WriteBytes(challengePacketData, &index, nonce[:], core.NonceBytes_Box)
 							encryptStart := index
 							core.WriteEncryptedChallengeToken(challengePacketData, &index, &challengeToken, challengePrivateKey)
@@ -562,7 +571,7 @@ func mainReturnWithCode() int {
 
 						sessionEntry.UpdatingSessionToken = true
 
-						core.Debug("updating session token for session %s", core.IdString(sessionToken.SessionId[:]))
+						core.Debug("updating session token for %s", core.IdString(sessionToken.SessionId[:]))
 
 						go func(channel chan SessionTokenUpdate, inputSessionTokenData [core.EncryptedSessionTokenBytes]byte) {
 
@@ -634,9 +643,10 @@ func mainReturnWithCode() int {
 						select {
 						case update := <-sessionEntry.SessionTokenChannel:
 							if len(update.SessionTokenData) != 0 {
-								core.Info("updated session token for session %s", core.IdString(sessionId[:]))
 								copy(sessionEntry.SessionTokenData[:], update.SessionTokenData[:])
 								sessionEntry.SessionTokenExpireTimestamp = update.ExpireTimestamp
+								sessionEntry.SessionTokenSequence++
+								core.Info("updated session token for %s %d", core.IdString(sessionId[:]), sessionEntry.SessionTokenSequence)
 							}
 							sessionEntry.UpdatingSessionToken = false
 						default:
@@ -655,6 +665,7 @@ func mainReturnWithCode() int {
 					core.WriteAddress(forwardPacketData, &index, gatewayInternalAddress)
 					core.WriteAddress(forwardPacketData, &index, from)
 					core.WriteBytes(forwardPacketData[:], &index, sessionEntry.SessionTokenData[:], core.EncryptedSessionTokenBytes)
+					core.WriteUint64(forwardPacketData[:], &index, sessionEntry.SessionTokenSequence)
 					core.WriteBytes(forwardPacketData, &index, header, core.HeaderBytes)
 					core.WriteBytes(forwardPacketData, &index, payload, len(payload))
 
@@ -741,8 +752,7 @@ func mainReturnWithCode() int {
 
 					core.Debug("recv internal %d byte packet from %s", packetBytes, from.String())
 
-					// todo: it's actually much larger than this that is the minimum, put this somewhere in core.go
-					if packetBytes <= core.PacketTypeBytes+core.VersionBytes+core.AddressBytes {
+					if packetBytes < core.PacketTypeBytes + core.VersionBytes + core.AddressBytes + core.EncryptedSessionTokenBytes + core.SequenceBytes + core.HeaderBytes + core.MinPayloadBytes {
 						core.Debug("internal packet is too small")
 						continue
 					}
@@ -766,10 +776,16 @@ func mainReturnWithCode() int {
 					// grab the session token
 
 					sessionTokenData := packetData[index : index+core.EncryptedSessionTokenBytes]
+					index += core.EncryptedSessionTokenBytes
+
+					// grab the session token sequence
+
+					sessionTokenSequence := packetData[index:index+core.SequenceBytes]
+					index += core.SequenceBytes
 
 					// split the packet apart into sections
 
-					headerIndex := core.VersionBytes + core.PacketTypeBytes + core.AddressBytes + core.EncryptedSessionTokenBytes
+					headerIndex := core.VersionBytes + core.PacketTypeBytes + core.AddressBytes + core.EncryptedSessionTokenBytes + core.SequenceBytes
 
 					payloadIndex := headerIndex + core.HeaderBytes
 					payloadBytes := len(packetData) - payloadIndex
@@ -787,13 +803,14 @@ func mainReturnWithCode() int {
 
 					version := byte(0)
 
-					encryptStart := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes + core.EncryptedSessionTokenBytes + core.SessionIdBytes + core.SequenceBytes
+					encryptStart := core.PrefixBytes + core.SessionIdBytes + core.SequenceBytes
 
 					core.WriteUint8(forwardPacketData, &index, version)
 					core.WriteUint8(forwardPacketData, &index, core.PayloadPacket)
 					chonkle := forwardPacketData[index : index+core.ChonkleBytes]
 					index += core.ChonkleBytes
 					core.WriteBytes(forwardPacketData, &index, sessionTokenData, core.EncryptedSessionTokenBytes)
+					core.WriteBytes(forwardPacketData, &index, sessionTokenSequence, core.SequenceBytes)
 					core.WriteBytes(forwardPacketData, &index, header, core.HeaderBytes)
 					core.WriteBytes(forwardPacketData, &index, payload, payloadBytes)
 					encryptFinish := index

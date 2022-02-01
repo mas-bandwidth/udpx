@@ -97,7 +97,10 @@ func mainReturnWithCode() int {
 	}
 
 	var sessionTokenMutex sync.RWMutex
-	sessionTokenData := connectToken[core.ConnectDataBytes:]
+	sessionTokenData := make([]byte, core.EncryptedSessionTokenBytes)
+	copy(sessionTokenData[:], connectToken[core.ConnectDataBytes:])
+	sessionTokenSequence := uint64(0)
+	sessionTokenExpireTime := time.Now().Add(time.Second * core.ConnectTokenExpireSeconds)
 
 	gatewayAddress := &connectData.GatewayAddress
 	gatewayPublicKey := connectData.GatewayPublicKey[:]
@@ -230,6 +233,7 @@ func mainReturnWithCode() int {
 					index += core.ChonkleBytes
 					sessionTokenMutex.RLock()
 					core.WriteBytes(packetData, &index, sessionTokenData, core.EncryptedSessionTokenBytes)
+					core.WriteUint64(packetData, &index, sessionTokenSequence)
 					sessionTokenMutex.RUnlock()
 					core.WriteBytes(packetData, &index, sessionId, core.SessionIdBytes)
 					sequenceData := packetData[index : index+core.SequenceBytes]
@@ -409,7 +413,7 @@ func mainReturnWithCode() int {
 
 						// decrypt packet
 
-						sequenceIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes + core.EncryptedSessionTokenBytes + core.SessionIdBytes
+						sequenceIndex := core.PrefixBytes + core.SessionIdBytes
 						encryptedDataIndex := sequenceIndex + core.SequenceBytes
 
 						sequenceData := packetData[sequenceIndex : sequenceIndex+core.SequenceBytes]
@@ -464,20 +468,27 @@ func mainReturnWithCode() int {
 
 						receivedPackets[sequence%SequenceBufferSize] = sequence
 
-						// ---------------------------------
+						// update session token if the gateway has a newer one
 
-						// todo: check the session token sequence to see if this sequence is more recent
-						
 						sessionTokenDataIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes
+						sessionTokenSequenceIndex := sessionTokenDataIndex + core.EncryptedSessionTokenBytes
 						
 						packetSessionTokenData := packetData[sessionTokenDataIndex : sessionTokenDataIndex+core.EncryptedSessionTokenBytes]
 
 						sessionTokenMutex.Lock()
-						sessionTokenData = make([]byte, core.EncryptedSessionTokenBytes)
-						copy(sessionTokenData[:], packetSessionTokenData[:])
-						sessionTokenMutex.Unlock()
 
-						// ---------------------------------
+						index = sessionTokenSequenceIndex
+						var packetSessionTokenSequence uint64
+						core.ReadUint64(packetData, &index, &packetSessionTokenSequence)
+
+						if packetSessionTokenSequence > sessionTokenSequence {
+							core.Info("updated session token %d", packetSessionTokenSequence)
+							copy(sessionTokenData[:], packetSessionTokenData[:])
+							sessionTokenSequence = packetSessionTokenSequence
+							sessionTokenExpireTime = time.Now().Add(time.Second * core.ConnectTokenExpireSeconds)
+						}
+	
+						sessionTokenMutex.Unlock()
 
 						// process payload packet
 
@@ -589,7 +600,7 @@ func mainReturnWithCode() int {
 							continue
 						}
 
-						nonceIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes + core.EncryptedSessionTokenBytes
+						nonceIndex := core.VersionBytes + core.PacketTypeBytes + core.ChonkleBytes + core.EncryptedSessionTokenBytes + core.SequenceBytes
 
 						encryptedDataIndex := nonceIndex + core.NonceBytes_Box
 
@@ -635,6 +646,8 @@ func mainReturnWithCode() int {
 
 	// main loop
 
+	termChan := make(chan os.Signal, 1)
+
 	go func() {
 
 		ackBuffer := [QueueSize]uint64{}
@@ -674,6 +687,20 @@ func mainReturnWithCode() int {
 				}
 			}
 
+			// have we timed out?
+
+			timedOut := false
+			sessionTokenMutex.RLock()
+			if sessionTokenExpireTime.Before(time.Now()) {
+				timedOut = true
+			}
+			sessionTokenMutex.RUnlock()
+
+			if timedOut {
+				core.Info("disconnected")
+				termChan <- syscall.SIGTERM
+			}
+
 			// sleep till next frame
 
 			time.Sleep(10 * time.Millisecond)
@@ -681,11 +708,10 @@ func mainReturnWithCode() int {
 
 	}()
 
-	termChan := make(chan os.Signal, 1)
 	signal.Notify(termChan, os.Interrupt, syscall.SIGTERM)
 	<-termChan
 
-	core.Info("\nshutting down")
+	core.Info("shutting down")
 
 	ctxCancelFunc()
 

@@ -75,7 +75,7 @@ const PrivateKeyBytes_SecretBox = 32
 const NonceBytes_SecretBox = 24
 const HMACBytes_SecretBox = 16
 
-const PrefixBytes = VersionBytes + PacketTypeBytes + ChonkleBytes + EncryptedSessionTokenBytes
+const PrefixBytes = VersionBytes + PacketTypeBytes + ChonkleBytes + EncryptedSessionTokenBytes + SequenceBytes
 const HeaderBytes = SessionIdBytes + SequenceBytes + AckBytes + AckBitsBytes + GatewayIdBytes + ServerIdBytes + PacketTypeBytes + FlagsBytes
 const PostfixBytes = HMACBytes_Box + PittleBytes
 

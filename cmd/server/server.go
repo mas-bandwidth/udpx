@@ -241,6 +241,8 @@ func mainReturnWithCode() int {
 				core.ReadAddress(packetData, &index, &clientAddress)
 				sessionTokenData := packetData[index : index+core.EncryptedSessionTokenBytes]
 				index += core.EncryptedSessionTokenBytes
+				sessionTokenSequence := packetData[index : index+core.SequenceBytes]
+				index += core.SequenceBytes
 				core.ReadBytes(packetData, &index, sessionId[:], core.SessionIdBytes)
 				core.ReadUint64(packetData, &index, &sequence)
 				core.ReadUint64(packetData, &index, &ack)
@@ -423,6 +425,7 @@ func mainReturnWithCode() int {
 				core.WriteUint8(responsePacketData, &index, core.PayloadPacket)
 				core.WriteAddress(responsePacketData, &index, &clientAddress)
 				core.WriteBytes(responsePacketData, &index, sessionTokenData[:], core.EncryptedSessionTokenBytes)
+				core.WriteBytes(responsePacketData, &index, sessionTokenSequence[:], core.SequenceBytes)
 				core.WriteBytes(responsePacketData, &index, sessionId[:], core.SessionIdBytes)
 				core.WriteUint64(responsePacketData, &index, send_sequence)
 				core.WriteUint64(responsePacketData, &index, send_ack)

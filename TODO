@@ -2,17 +2,9 @@ DONE
 
 	Add a mutex to protect the session token on the client. We can't write to and read from it from different threads.
 
-TODO
-
-	---------------
-
 	Add mutex on client around gateway id
 
-	---------------
-
 	Add mutex on client around server id
-
-	---------------
 
 	Now the client should only update the session token if it is newer.
 
@@ -20,9 +12,15 @@ TODO
 
 	When a new session token comes along, the client updates to it, and updates its own session token sequence.
 
+	Verify client gets in a steady state updating session tokens and prints out correct session token sequence every ~10 secs.
+
+	Extend auth to not update session tokens unless they are close to expiring (within session token extension time of expire). This way you can't repeatedly hammer to extend +10 whenever you want, you can only actually get an extension in real time.
+
 	The client also sets an expire time for the session token at initially 20 seconds (connect), and then subsequently 10 seconds after each session token update.
 
 	When the client detects that the session token has expired, the client times out and prints "disconnected" before exiting.
+
+TODO
 
 	---------------
 
@@ -38,11 +36,11 @@ TODO
 
 	Reduce timeout to 1 sec.
 
-	Verify that retries happen.
+	Verify that retries happen when auth is down.
 
 	Track the retries, and print them out numbered.
 
-	Don't run auth, and verify that the retries kick in once per-second until session token times out.
+	Don't run auth, and verify that the retries kick in until session token times out.
 
 	---------------
 
@@ -80,7 +78,7 @@ TODO
 
 	---------------
 
-	Enforce this bandwidth envelope on the gateway via dropping any additional packets above the envelope.
+	Enforce this bandwidth envelope on the gateway via dropping any additional received packets above the envelope.
 
 	---------------
 

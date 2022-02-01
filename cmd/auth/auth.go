@@ -189,6 +189,13 @@ func sessionTokenHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if sessionToken.ExpireTimestamp > uint64(time.Now().Unix()) + core.SessionTokenExtensionSeconds {
+		// todo: core debug
+		fmt.Printf("too soon\n")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	if sessionToken.ExpireTimestamp < uint64(time.Now().Unix()) {
 		// todo: core debug
 		fmt.Printf("session token has expired\n")
