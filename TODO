@@ -8,14 +8,12 @@ DONE
 
 	Enforce the bandwidth envelope on the gateway recv via dropping any additional received packets above the envelope.
 
-TODO
-
-	---------------
-
 	Enforce the bandwidth envelope on the server send via choke.
 
 	Base it around calculations driven by the payload size, what the real packet sent by the gateway would be, and calculate bits from this.
 
 	This way it is conservative.
 
-	---------------
+TODO
+
+	What's the next step?

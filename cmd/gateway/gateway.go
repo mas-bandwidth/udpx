@@ -462,7 +462,7 @@ func mainReturnWithCode() int {
 							sessionEntry.ReceiveBandwidthBitsPerSecondMax = uint64(sessionToken.EnvelopeUpKbps * 1000.0)
 
 							sessionEntry.ReceiveBandwidthBitsResetTime = time.Now().Add(time.Second)
-							
+
 							sessionMap_New[sessionId] = sessionEntry
 
 							core.Info("new session %s from %s", core.IdString(sessionId[:]), from.String())
@@ -587,7 +587,7 @@ func mainReturnWithCode() int {
 
 					canReceivePacket := true
 
-					if sessionEntry.ReceiveBandwidthBitsAccumulator + wireBits <= sessionEntry.ReceiveBandwidthBitsPerSecondMax {
+					if sessionEntry.ReceiveBandwidthBitsAccumulator+wireBits <= sessionEntry.ReceiveBandwidthBitsPerSecondMax {
 						sessionEntry.ReceiveBandwidthBitsAccumulator += wireBits
 					} else {
 						canReceivePacket = false

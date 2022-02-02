@@ -319,7 +319,7 @@ func mainReturnWithCode() int {
 					bandwidthMutex.Unlock()
 
 					if !canSendPacket {
-						core.Info("choke")
+						core.Debug("choke")
 						continue
 					}
 

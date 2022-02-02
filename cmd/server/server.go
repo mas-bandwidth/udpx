@@ -56,12 +56,15 @@ const SequenceBufferSize = 1024
 const QueueSize = 1024
 
 type SessionEntry struct {
-	SendSequence        uint64
-	ReceiveSequence     uint64
-	AckedPackets        [SequenceBufferSize]uint64
-	ReceivedPackets     [SequenceBufferSize]uint64
-	SendPayloadId       uint64
-	SequenceToPayloadId [SequenceBufferSize]uint64
+	SendSequence                  uint64
+	ReceiveSequence               uint64
+	AckedPackets                  [SequenceBufferSize]uint64
+	ReceivedPackets               [SequenceBufferSize]uint64
+	SendPayloadId                 uint64
+	SequenceToPayloadId           [SequenceBufferSize]uint64
+	SendBandwidthBitsAccumulator  uint64
+	SendBandwidthBitsPerSecondMax uint64
+	SendBandwidthBitsResetTime    time.Time
 }
 
 // Allows us to return an exit code and allows log flushes and deferred functions
@@ -301,19 +304,33 @@ func mainReturnWithCode() int {
 				// lookup or create a session entry
 
 				sessionEntry := sessionMap_New[sessionId]
+				
 				if sessionEntry == nil {
+				
 					sessionEntry = sessionMap_Old[sessionId]
+				
 					if sessionEntry == nil {
+						
 						// add new session entry
-						sessionEntry = &SessionEntry{SendSequence: ack + 10000, ReceiveSequence: sequence}
+
+						sessionEntry = &SessionEntry{}
+						sessionEntry.SendSequence = ack + 10000
+						sessionEntry.ReceiveSequence = sequence
+						sessionEntry.SendBandwidthBitsPerSecondMax = 10000 * 1000 // todo: gateway needs to pass this up to server (envelopeDownKbps)
+						sessionEntry.SendBandwidthBitsResetTime = time.Now().Add(time.Second)
 						for i := range sessionEntry.SequenceToPayloadId {
 							sessionEntry.SequenceToPayloadId[i] = ^uint64(0)
 						}
+						
 						sessionMap_New[sessionId] = sessionEntry
+						
 						core.Info("new session %s from %s", core.IdString(sessionId[:]), clientAddress.String())
+				
 					} else {
+				
 						// migrate old -> new session map
 						sessionMap_New[sessionId] = sessionEntry
+				
 					}
 				}
 
@@ -366,6 +383,32 @@ func mainReturnWithCode() int {
 				responsePayload := make([]byte, core.MinPayloadBytes)
 				for i := 0; i < core.MinPayloadBytes; i++ {
 					responsePayload[i] = byte(i)
+				}
+
+				// do we have enough bandwidth available to send this packet?
+
+				if sessionEntry.SendBandwidthBitsResetTime.Before(time.Now()) {
+					sendBandwidthMbps := float64(sessionEntry.SendBandwidthBitsAccumulator) / 1000000.0
+					sessionEntry.SendBandwidthBitsResetTime = time.Now().Add(time.Second)
+					sessionEntry.SendBandwidthBitsAccumulator = 0
+					core.Info("session %s is %.2f mbps", core.IdString(sessionId[:]), sendBandwidthMbps)
+				}
+
+				gatewayPacketBytes := core.PacketBytesFromPayload(len(responsePayload))
+
+				wireBits := uint64(core.WirePacketBits(gatewayPacketBytes))
+
+				canSendPacket := true
+
+				if sessionEntry.SendBandwidthBitsAccumulator + wireBits <= sessionEntry.SendBandwidthBitsPerSecondMax {
+					sessionEntry.SendBandwidthBitsAccumulator += wireBits
+				} else {
+					canSendPacket = false
+				}
+
+				if !canSendPacket {
+					core.Info("choke")
+					continue
 				}
 
 				// build response payload packet
