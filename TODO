@@ -1,21 +1,21 @@
 DONE
 
-TODO
-
-	---------------	
-
 	Extend the connect data and session token to include the up/down bandwidth envelope in kbps.
 
-	---------------
+	Track send and receive bandwidth on the client.
 
 	Enforce this bandwidth envelope on the client via choke.
 
+	Enforce the bandwidth envelope on the gateway recv via dropping any additional received packets above the envelope.
+
+TODO
+
 	---------------
 
-	Enforce this bandwidth envelope on the gateway via dropping any additional received packets above the envelope.
+	Enforce the bandwidth envelope on the server send via choke.
 
-	---------------
+	Base it around calculations driven by the payload size, what the real packet sent by the gateway would be, and calculate bits from this.
 
-	Enforce this bandwidth envelope on the server via choke.
+	This way it is conservative.
 
 	---------------

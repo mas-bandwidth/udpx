@@ -96,6 +96,13 @@ func mainReturnWithCode() int {
 		return 1
 	}
 
+	envelopeUpKbps := connectData.EnvelopeUpKbps
+
+	var bandwidthMutex sync.RWMutex
+	sendBandwidthBitsAccumulator := uint64(0)
+	sendBandwidthBitsPerSecondMax := uint64(envelopeUpKbps * 1000)
+	sendBandwidthBitsResetTime := time.Now().Add(time.Second)
+
 	var sessionTokenMutex sync.RWMutex
 	sessionTokenData := make([]byte, core.EncryptedSessionTokenBytes)
 	copy(sessionTokenData[:], connectToken[core.ConnectDataBytes:])
@@ -296,6 +303,27 @@ func mainReturnWithCode() int {
 					if !core.AdvancedPacketFilter(packetData, magic[:], fromAddressData[:], fromAddressPort, toAddressData[:], toAddressPort, packetBytes) {
 						panic("advanced packet filter failed")
 					}
+
+					// do we have enough bandwidth available to send this packet?
+
+					wireBits := uint64(core.WirePacketBits(len(packetData)))
+
+					canSendPacket := true
+
+					bandwidthMutex.Lock()
+					if sendBandwidthBitsAccumulator+wireBits <= sendBandwidthBitsPerSecondMax {
+						sendBandwidthBitsAccumulator += wireBits
+					} else {
+						canSendPacket = false
+					}
+					bandwidthMutex.Unlock()
+
+					if !canSendPacket {
+						core.Info("choke")
+						continue
+					}
+
+					// send the packet
 
 					if _, err := conn.WriteToUDP(packetData, gatewayAddress); err != nil {
 						core.Error("failed to write udp packet: %v", err)
@@ -700,6 +728,17 @@ func mainReturnWithCode() int {
 				core.Info("disconnected")
 				termChan <- syscall.SIGTERM
 			}
+
+			// update bandwidth usage
+
+			bandwidthMutex.Lock()
+			if sendBandwidthBitsResetTime.Before(time.Now()) {
+				sendBandwidthMbps := float64(sendBandwidthBitsAccumulator) / 1000000.0
+				sendBandwidthBitsResetTime = time.Now().Add(time.Second)
+				sendBandwidthBitsAccumulator = 0
+				core.Debug("%.2f mbps", sendBandwidthMbps)
+			}
+			bandwidthMutex.Unlock()
 
 			// sleep till next frame
 

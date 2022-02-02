@@ -66,15 +66,18 @@ type SessionTokenUpdate struct {
 }
 
 type SessionEntry struct {
-	ReceivedSequence            uint64
-	ReceivedPackets             [OldSequenceThreshold]uint64
-	UpdatingSessionToken        bool
-	SessionTokenChannel         chan SessionTokenUpdate
-	SessionTokenData            [core.EncryptedSessionTokenBytes]byte
-	SessionTokenExpireTimestamp uint64
-	SessionTokenSequence        uint64
-	SessionTokenCooldown        time.Time
-	SessionTokenRetryCount      int
+	ReceivedSequence                 uint64
+	ReceivedPackets                  [OldSequenceThreshold]uint64
+	UpdatingSessionToken             bool
+	SessionTokenChannel              chan SessionTokenUpdate
+	SessionTokenData                 [core.EncryptedSessionTokenBytes]byte
+	SessionTokenExpireTimestamp      uint64
+	SessionTokenSequence             uint64
+	SessionTokenCooldown             time.Time
+	SessionTokenRetryCount           int
+	ReceiveBandwidthBitsAccumulator  uint64
+	ReceiveBandwidthBitsPerSecondMax uint64
+	ReceiveBandwidthBitsResetTime    time.Time
 }
 
 func main() {
@@ -448,11 +451,18 @@ func mainReturnWithCode() int {
 								sessionId[i] = senderPublicKey[i]
 							}
 
+							// create new session entry
+
 							sessionEntry := &SessionEntry{ReceivedSequence: challengeToken.Sequence}
+
 							sessionEntry.SessionTokenChannel = make(chan SessionTokenUpdate, 1)
 							copy(sessionEntry.SessionTokenData[:], sessionTokenDataCopy[:])
 							sessionEntry.SessionTokenExpireTimestamp = sessionToken.ExpireTimestamp
 							sessionEntry.SessionTokenSequence = sessionTokenSequence
+							sessionEntry.ReceiveBandwidthBitsPerSecondMax = uint64(sessionToken.EnvelopeUpKbps * 1000.0)
+
+							sessionEntry.ReceiveBandwidthBitsResetTime = time.Now().Add(time.Second)
+							
 							sessionMap_New[sessionId] = sessionEntry
 
 							core.Info("new session %s from %s", core.IdString(sessionId[:]), from.String())
@@ -562,6 +572,30 @@ func mainReturnWithCode() int {
 
 					if sessionEntry.ReceivedPackets[sequence%OldSequenceThreshold] == sequence {
 						core.Debug("packet %d has already been forwarded to the server", sequence)
+					}
+
+					// do we have enough bandwidth available to receive this packet?
+
+					if sessionEntry.ReceiveBandwidthBitsResetTime.Before(time.Now()) {
+						receiveBandwidthMbps := float64(sessionEntry.ReceiveBandwidthBitsAccumulator) / 1000000.0
+						sessionEntry.ReceiveBandwidthBitsResetTime = time.Now().Add(time.Second)
+						sessionEntry.ReceiveBandwidthBitsAccumulator = 0
+						core.Debug("session %s is %.2f mbps", core.IdString(sessionId[:]), receiveBandwidthMbps)
+					}
+
+					wireBits := uint64(core.WirePacketBits(len(packetData)))
+
+					canReceivePacket := true
+
+					if sessionEntry.ReceiveBandwidthBitsAccumulator + wireBits <= sessionEntry.ReceiveBandwidthBitsPerSecondMax {
+						sessionEntry.ReceiveBandwidthBitsAccumulator += wireBits
+					} else {
+						canReceivePacket = false
+					}
+
+					if !canReceivePacket {
+						core.Debug("choke")
+						continue
 					}
 
 					// update session token

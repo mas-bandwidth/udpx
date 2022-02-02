@@ -97,6 +97,10 @@ const EncryptedSessionTokenBytes = NonceBytes_SecretBox + SessionTokenBytes + HM
 
 const ConnectDataBytes = PublicKeyBytes_Box + PrivateKeyBytes_Box + AddressBytes + PublicKeyBytes_Box + EnvelopeBytes
 
+const EthernetHeaderBytes = 18
+const IPv4HeaderBytes = 18
+const UDPHeaderBytes = 8
+
 func Keygen_Box() ([]byte, []byte) {
 	var publicKey [PublicKeyBytes_Box]byte
 	var privateKey [PrivateKeyBytes_Box]byte
@@ -815,6 +819,8 @@ func GenerateConnectToken(userId []byte, envelopeUpKbps uint32, envelopeDownKbps
 	sessionToken.ExpireTimestamp = uint64(time.Now().Unix()) + ConnectTokenExpireSeconds
 	copy(sessionToken.SessionId[:], connectData.ClientPublicKey[:])
 	copy(sessionToken.UserId[:], userId[:])
+	sessionToken.EnvelopeUpKbps = envelopeUpKbps
+	sessionToken.EnvelopeDownKbps = envelopeDownKbps
 
 	buffer := make([]byte, ConnectDataBytes+EncryptedSessionTokenBytes)
 
@@ -825,4 +831,8 @@ func GenerateConnectToken(userId []byte, envelopeUpKbps uint32, envelopeDownKbps
 	WriteEncryptedSessionToken(buffer, &index, &sessionToken, senderPrivateKey, receiverPublicKey)
 
 	return buffer
+}
+
+func WirePacketBits(packetBytes int) int {
+	return (EthernetHeaderBytes + IPv4HeaderBytes + UDPHeaderBytes + packetBytes) * 8
 }
