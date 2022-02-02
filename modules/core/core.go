@@ -836,3 +836,10 @@ func GenerateConnectToken(userId []byte, envelopeUpKbps uint32, envelopeDownKbps
 func WirePacketBits(packetBytes int) int {
 	return (EthernetHeaderBytes + IPv4HeaderBytes + UDPHeaderBytes + packetBytes) * 8
 }
+
+func PacketBytesFromPayload(payloadBytes int) int {
+	if payloadBytes < MinPayloadBytes {
+		payloadBytes = MinPayloadBytes
+	}
+	return payloadBytes + PrefixBytes + HeaderBytes + PostfixBytes
+}
