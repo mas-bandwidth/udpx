@@ -391,7 +391,7 @@ func mainReturnWithCode() int {
 					sendBandwidthMbps := float64(sessionEntry.SendBandwidthBitsAccumulator) / 1000000.0
 					sessionEntry.SendBandwidthBitsResetTime = time.Now().Add(time.Second)
 					sessionEntry.SendBandwidthBitsAccumulator = 0
-					core.Info("session %s is %.2f mbps", core.IdString(sessionId[:]), sendBandwidthMbps)
+					core.Debug("session %s is %.2f mbps", core.IdString(sessionId[:]), sendBandwidthMbps)
 				}
 
 				gatewayPacketBytes := core.PacketBytesFromPayload(len(responsePayload))
