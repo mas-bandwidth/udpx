@@ -159,7 +159,8 @@ func connectTokenHandler(w http.ResponseWriter, r *http.Request) {
 	var userId [core.UserIdBytes]byte
 	envelopeUpKbps := uint32(2500)
 	envelopeDownKbps := uint32(10000)
-	connectToken := core.GenerateConnectToken(userId[:], envelopeUpKbps, envelopeDownKbps, GatewayAddress, GatewayPublicKey[:], AuthPrivateKey[:], GatewayPublicKey[:])
+	packetsPerSecond := uint8(100)
+	connectToken := core.GenerateConnectToken(userId[:], envelopeUpKbps, envelopeDownKbps, packetsPerSecond, GatewayAddress, GatewayPublicKey[:], AuthPrivateKey[:], GatewayPublicKey[:])
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.WriteHeader(http.StatusOK)
 	w.Write(connectToken)

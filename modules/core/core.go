@@ -92,10 +92,14 @@ const SessionTokenExtensionSeconds = 10
 
 const EnvelopeBytes = 8
 
-const SessionTokenBytes = 8 + SessionIdBytes + UserIdBytes + EnvelopeBytes
+const PacketsPerSecondBytes = 1
+
+const SessionTokenBytes = 8 + SessionIdBytes + UserIdBytes + EnvelopeBytes + PacketsPerSecondBytes
 const EncryptedSessionTokenBytes = NonceBytes_SecretBox + SessionTokenBytes + HMACBytes_SecretBox
 
-const ConnectDataBytes = PublicKeyBytes_Box + PrivateKeyBytes_Box + AddressBytes + PublicKeyBytes_Box + EnvelopeBytes
+const ConnectDataBytes = PublicKeyBytes_Box + PrivateKeyBytes_Box + AddressBytes + PublicKeyBytes_Box + EnvelopeBytes + PacketsPerSecondBytes
+
+const ConnectTokenBytes = ConnectDataBytes + EncryptedSessionTokenBytes
 
 const EthernetHeaderBytes = 18
 const IPv4HeaderBytes = 18
@@ -722,6 +726,7 @@ type SessionToken struct {
 	UserId           [UserIdBytes]byte
 	EnvelopeUpKbps   uint32
 	EnvelopeDownKbps uint32
+	PacketsPerSecond uint8
 }
 
 func WriteSessionToken(buffer []byte, index *int, token *SessionToken) {
@@ -730,6 +735,7 @@ func WriteSessionToken(buffer []byte, index *int, token *SessionToken) {
 	WriteBytes(buffer, index, token.UserId[:], UserIdBytes)
 	WriteUint32(buffer, index, token.EnvelopeUpKbps)
 	WriteUint32(buffer, index, token.EnvelopeDownKbps)
+	WriteUint8(buffer, index, token.PacketsPerSecond)
 }
 
 func ReadSessionToken(buffer []byte, index *int, token *SessionToken) bool {
@@ -741,6 +747,7 @@ func ReadSessionToken(buffer []byte, index *int, token *SessionToken) bool {
 	ReadBytes(buffer, index, token.UserId[:], UserIdBytes)
 	ReadUint32(buffer, index, &token.EnvelopeUpKbps)
 	ReadUint32(buffer, index, &token.EnvelopeDownKbps)
+	ReadUint8(buffer, index, &token.PacketsPerSecond)
 	return true
 }
 
@@ -777,6 +784,7 @@ type ConnectData struct {
 	GatewayPublicKey [PublicKeyBytes_Box]byte
 	EnvelopeUpKbps   uint32
 	EnvelopeDownKbps uint32
+	PacketsPerSecond uint8
 }
 
 func WriteConnectData(buffer []byte, index *int, connectData *ConnectData) {
@@ -786,6 +794,7 @@ func WriteConnectData(buffer []byte, index *int, connectData *ConnectData) {
 	WriteBytes(buffer, index, connectData.GatewayPublicKey[:], UserIdBytes)
 	WriteUint32(buffer, index, connectData.EnvelopeUpKbps)
 	WriteUint32(buffer, index, connectData.EnvelopeDownKbps)
+	WriteUint8(buffer, index, connectData.PacketsPerSecond)
 }
 
 func ReadConnectData(buffer []byte, index *int, connectData *ConnectData) bool {
@@ -798,12 +807,11 @@ func ReadConnectData(buffer []byte, index *int, connectData *ConnectData) bool {
 	ReadBytes(buffer, index, connectData.GatewayPublicKey[:], PublicKeyBytes_Box)
 	ReadUint32(buffer, index, &connectData.EnvelopeUpKbps)
 	ReadUint32(buffer, index, &connectData.EnvelopeDownKbps)
+	ReadUint8(buffer, index, &connectData.PacketsPerSecond)
 	return true
 }
 
-const ConnectTokenBytes = ConnectDataBytes + EncryptedSessionTokenBytes
-
-func GenerateConnectToken(userId []byte, envelopeUpKbps uint32, envelopeDownKbps uint32, gatewayAddress *net.UDPAddr, gatewayPublicKey []byte, senderPrivateKey []byte, receiverPublicKey []byte) []byte {
+func GenerateConnectToken(userId []byte, envelopeUpKbps uint32, envelopeDownKbps uint32, packetsPerSecond uint8, gatewayAddress *net.UDPAddr, gatewayPublicKey []byte, senderPrivateKey []byte, receiverPublicKey []byte) []byte {
 
 	publicKey, privateKey := Keygen_Box()
 
@@ -814,6 +822,7 @@ func GenerateConnectToken(userId []byte, envelopeUpKbps uint32, envelopeDownKbps
 	copy(connectData.GatewayPublicKey[:], gatewayPublicKey[:])
 	connectData.EnvelopeUpKbps = envelopeUpKbps
 	connectData.EnvelopeDownKbps = envelopeDownKbps
+	connectData.PacketsPerSecond = packetsPerSecond
 
 	sessionToken := SessionToken{}
 	sessionToken.ExpireTimestamp = uint64(time.Now().Unix()) + ConnectTokenExpireSeconds
@@ -821,6 +830,7 @@ func GenerateConnectToken(userId []byte, envelopeUpKbps uint32, envelopeDownKbps
 	copy(sessionToken.UserId[:], userId[:])
 	sessionToken.EnvelopeUpKbps = envelopeUpKbps
 	sessionToken.EnvelopeDownKbps = envelopeDownKbps
+	sessionToken.PacketsPerSecond = packetsPerSecond
 
 	buffer := make([]byte, ConnectDataBytes+EncryptedSessionTokenBytes)
 

@@ -18,6 +18,32 @@ TODO
 
 	What's the next step?
 
+	Specify packets per-second via connect data, session token.
+
+	Actually use this on the client to drive the rate of send.
+
+	Enforce the send rate on the gateway for received packets (no more than the value + 10%...)
+
+	Do not worry about the send rate on the server for now, since it is a reflector.
+
+	-----------
+
+	Add measurements of sent and received bandwidth on the client
+
+	-----------
+
+	Add measurements of packet loss, jitter, latency etc.
+
+	-----------
+
+	Extend the auth service to accept the user id passed in, and the packet send rate, and up/down envelopes.
+
+	-----------
+
 	Magic value service.
 
-	After this? Key rotation...
+	-----------
+
+	Key rotation.
+
+	-----------

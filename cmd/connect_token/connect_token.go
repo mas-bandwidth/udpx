@@ -62,8 +62,9 @@ func main() {
 
 	envelopeUpKbps := uint32(2500)
 	envelopeDownKbps := uint32(10000)
+	packetsPerSecond := uint8(100)
 
-	connect_token := core.GenerateConnectToken(userId[:], envelopeUpKbps, envelopeDownKbps, gatewayAddress, gatewayPublicKey[:], authPrivateKey, gatewayPublicKey)
+	connect_token := core.GenerateConnectToken(userId[:], envelopeUpKbps, envelopeDownKbps, packetsPerSecond, gatewayAddress, gatewayPublicKey[:], authPrivateKey, gatewayPublicKey)
 
 	connect_token_base64 := base64.StdEncoding.EncodeToString(connect_token)
 
