@@ -1,0 +1,15 @@
+BACK BURNER
+
+	-----------
+
+	Extend the auth service to accept the user id passed in, and the packet send rate, and up/down envelopes.
+
+	-----------
+
+	Magic value service.
+
+	-----------
+
+	Key rotation.
+
+	-----------
