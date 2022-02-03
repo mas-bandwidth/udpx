@@ -6,4 +6,4 @@ TODO
 
 	This has to be the way to go forward. Demonstrate it working in the browser.
 
-	Then, after this, develop the channel system and schema to backend components.
+	Then, after this, develop the channel system and schema to backend components with per-channel reliability.
