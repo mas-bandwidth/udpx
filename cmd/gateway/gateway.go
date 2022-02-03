@@ -78,6 +78,8 @@ type SessionEntry struct {
 	ReceiveBandwidthBitsAccumulator  uint64
 	ReceiveBandwidthBitsPerSecondMax uint64
 	ReceiveBandwidthBitsResetTime    time.Time
+	PacketsReceivedInLastSecond      uint64
+	PacketsPerSecondMax              uint64
 }
 
 func main() {
@@ -460,6 +462,7 @@ func mainReturnWithCode() int {
 							sessionEntry.SessionTokenExpireTimestamp = sessionToken.ExpireTimestamp
 							sessionEntry.SessionTokenSequence = sessionTokenSequence
 							sessionEntry.ReceiveBandwidthBitsPerSecondMax = uint64(sessionToken.EnvelopeUpKbps * 1000.0)
+							sessionEntry.PacketsPerSecondMax = uint64(float32(sessionToken.PacketsPerSecond) * 1.1)
 
 							sessionEntry.ReceiveBandwidthBitsResetTime = time.Now().Add(time.Second)
 
@@ -580,6 +583,7 @@ func mainReturnWithCode() int {
 						receiveBandwidthMbps := float64(sessionEntry.ReceiveBandwidthBitsAccumulator) / 1000000.0
 						sessionEntry.ReceiveBandwidthBitsResetTime = time.Now().Add(time.Second)
 						sessionEntry.ReceiveBandwidthBitsAccumulator = 0
+						sessionEntry.PacketsReceivedInLastSecond = 0
 						core.Debug("session %s is %.2f mbps", core.IdString(sessionId[:]), receiveBandwidthMbps)
 					}
 
@@ -594,9 +598,19 @@ func mainReturnWithCode() int {
 					}
 
 					if !canReceivePacket {
-						core.Debug("choke")
+						core.Debug("choke bw")
 						continue
 					}
+
+					// too many packets per-second?
+
+					if sessionEntry.PacketsReceivedInLastSecond > sessionEntry.PacketsPerSecondMax {
+						canReceivePacket = false
+						core.Debug("choke pps")
+						continue						
+					}
+
+					sessionEntry.PacketsReceivedInLastSecond++
 
 					// update session token
 

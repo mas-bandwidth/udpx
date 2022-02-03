@@ -97,6 +97,7 @@ func mainReturnWithCode() int {
 	}
 
 	envelopeUpKbps := connectData.EnvelopeUpKbps
+	packetsPerSecond := int(connectData.PacketsPerSecond)
 
 	var bandwidthMutex sync.RWMutex
 	sendBandwidthBitsAccumulator := uint64(0)
@@ -742,9 +743,10 @@ func mainReturnWithCode() int {
 
 			// sleep till next frame
 
-			time.Sleep(10 * time.Millisecond)
-		}
+			frameTime := time.Duration(1000000000 / packetsPerSecond)
 
+			time.Sleep(frameTime)
+		}
 	}()
 
 	signal.Notify(termChan, os.Interrupt, syscall.SIGTERM)

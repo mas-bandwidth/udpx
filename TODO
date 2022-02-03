@@ -1,49 +1,9 @@
 DONE
 
-	Extend the connect data and session token to include the up/down bandwidth envelope in kbps.
-
-	Track send and receive bandwidth on the client.
-
-	Enforce this bandwidth envelope on the client via choke.
-
-	Enforce the bandwidth envelope on the gateway recv via dropping any additional received packets above the envelope.
-
-	Enforce the bandwidth envelope on the server send via choke.
-
-	Base it around calculations driven by the payload size, what the real packet sent by the gateway would be, and calculate bits from this.
-
-	This way it is conservative.
-
 TODO
 
-	What's the next step?
+	Get a client working in the browser, via WebRTC data channels.
 
-	Specify packets per-second via connect data, session token.
+	This has to be the way to go forward. Demonstrate it working in the browser.
 
-	Actually use this on the client to drive the rate of send.
-
-	Enforce the send rate on the gateway for received packets (no more than the value + 10%...)
-
-	Do not worry about the send rate on the server for now, since it is a reflector.
-
-	-----------
-
-	Add measurements of sent and received bandwidth on the client
-
-	-----------
-
-	Add measurements of packet loss, jitter, latency etc.
-
-	-----------
-
-	Extend the auth service to accept the user id passed in, and the packet send rate, and up/down envelopes.
-
-	-----------
-
-	Magic value service.
-
-	-----------
-
-	Key rotation.
-
-	-----------
+	Then, after this, develop the channel system and schema to backend components.
