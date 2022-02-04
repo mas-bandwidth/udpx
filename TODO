@@ -10,7 +10,7 @@ TODO
 
 		3. Unity integration
 
-		4. In broswer client -- WebSocket implementation (https://github.com/pion/webrtc/tree/master/examples/data-channels)
+		4. In broswer client (javascript w. WebRTC)
 
 	Aligned with my current direction, the most important thing is a C client leading to UE4 integration.
 
