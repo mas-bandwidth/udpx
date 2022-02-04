@@ -2,8 +2,19 @@ DONE
 
 TODO
 
-	Get a client working in the browser, via WebRTC data channels.
+	Strategically, key things I can do next:
 
-	This has to be the way to go forward. Demonstrate it working in the browser.
+		1. C client
 
-	Then, after this, develop the channel system and schema to backend components with per-channel reliability.
+		2. UE4 integration
+
+		3. Unity integration
+
+		4. In broswer client -- WebSocket implementation (https://github.com/pion/webrtc/tree/master/examples/data-channels)
+
+	Aligned with my current direction, the most important thing is a C client leading to UE4 integration.
+
+	The next most important thing after that is the WebSockets implementation.
+
+	Both will assist in developing an ABI and spec across multiple implementations.
+
