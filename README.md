@@ -7,3 +7,5 @@ Everybody has 10gbps internet and people regularly play games with virtual world
 What would the netcode for these games look like?
 
 UDPX is a thought experiment to see what game network protocols would be like 10 years from now... blending ideas from web development, MMOs and autoscaling microservice based backends into something completely new...
+
+*** UPDATE FROM 2024. JUST USE XDP ***
